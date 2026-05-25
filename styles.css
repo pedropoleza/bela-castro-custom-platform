@@ -4,72 +4,65 @@
 
 /* ---------- Theme tokens ---------- */
 :root {
-  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-display: "Fraunces", Georgia, serif;
   --font-body: "Manrope", system-ui, sans-serif;
 
   --maxw: 1180px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* dark defaults */
-  --bg: #0b0d10;
-  --bg-2: #12161b;
-  --sky-top: #0a0c10;
-  --sky-bot: #1b2026;
+  /* ---- LIGHT / CREME is the brand default (matches the deck) ---- */
+  --bg: #f1ece1;
+  --bg-2: #e8e1d2;
+  --sky-top: #f6f2e9;
+  --sky-bot: #e3dccb;
 
-  --mtn-far: #1a2128;
-  --mtn-mid: #232c34;
-  --mtn-near: #2d3942;
-  --mtn-fore: #161c21;
+  --mist: rgba(255, 255, 255, 0.3);
+  --glow: rgba(168, 138, 78, 0.34);
+  --rose: rgba(196, 132, 112, 0.3);
+  --sage-glow: rgba(110, 138, 104, 0.34);
 
-  --mist: rgba(180, 195, 200, 0.06);
-  --glow: rgba(198, 168, 110, 0.16);
-  --rose: rgba(214, 150, 142, 0.18);
-  --sage-glow: rgba(155, 176, 154, 0.16);
+  --text: #2a2f25;
+  --text-dim: #5f6555;
+  --line: rgba(42, 47, 37, 0.14);
 
-  --text: #ece7dd;
-  --text-dim: #9aa3a8;
-  --line: rgba(236, 231, 221, 0.12);
+  --forest: #3a4a36;
+  --sage: #7d8c75;
+  --clay: #b07a55;
+  --accent: var(--forest);
 
-  --gold: #c9a86a;
-  --sage: #9bb09a;
-  --accent: var(--gold);
+  --card-bg: rgba(252, 250, 244, 0.62);
+  --card-brd: rgba(42, 47, 37, 0.14);
+  --card-shadow: 0 30px 70px -34px rgba(50, 60, 40, 0.42);
 
-  --card-bg: rgba(28, 34, 40, 0.55);
-  --card-brd: rgba(236, 231, 221, 0.12);
-  --card-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.8);
-
-  --particle: rgba(236, 231, 221, 0.5);
+  --particle: rgba(90, 105, 80, 0.5);
 }
 
-[data-theme="light"] {
-  --bg: #f4efe6;
-  --bg-2: #efe8da;
-  --sky-top: #f6f1e8;
-  --sky-bot: #e6ddcc;
+[data-theme="dark"] {
+  /* ---- FOREST NIGHT alt theme ---- */
+  --bg: #11150e;
+  --bg-2: #161b12;
+  --sky-top: #0d110a;
+  --sky-bot: #1c2417;
 
-  --mtn-far: #d8cfbe;
-  --mtn-mid: #c4bba7;
-  --mtn-near: #aaa48f;
-  --mtn-fore: #b9b19c;
+  --mist: rgba(180, 200, 175, 0.06);
+  --glow: rgba(190, 165, 110, 0.18);
+  --rose: rgba(196, 132, 112, 0.16);
+  --sage-glow: rgba(130, 160, 125, 0.18);
 
-  --mist: rgba(255, 255, 255, 0.28);
-  --glow: rgba(201, 168, 106, 0.4);
-  --rose: rgba(206, 130, 118, 0.32);
-  --sage-glow: rgba(120, 150, 120, 0.3);
+  --text: #ece8dc;
+  --text-dim: #99a191;
+  --line: rgba(236, 232, 220, 0.12);
 
-  --text: #2b2a26;
-  --text-dim: #6f6a5e;
-  --line: rgba(43, 42, 38, 0.14);
+  --forest: #c2cdb6;
+  --sage: #9bb094;
+  --clay: #cf9a72;
+  --accent: var(--sage);
 
-  --gold: #a98232;
-  --sage: #6f8a6e;
-  --accent: var(--gold);
+  --card-bg: rgba(26, 32, 22, 0.55);
+  --card-brd: rgba(236, 232, 220, 0.12);
+  --card-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.8);
 
-  --card-bg: rgba(255, 252, 246, 0.6);
-  --card-brd: rgba(43, 42, 38, 0.12);
-  --card-shadow: 0 30px 70px -34px rgba(70, 60, 40, 0.4);
-
-  --particle: rgba(120, 110, 90, 0.45);
+  --particle: rgba(236, 232, 220, 0.5);
 }
 
 /* ---------- Reset ---------- */
@@ -256,11 +249,11 @@ section { position: relative; }
 }
 .btn--lg { padding: 17px 38px; font-size: 1rem; }
 .btn--primary {
-  background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, #fff 30%));
-  color: #1a1407;
-  box-shadow: 0 14px 36px -14px var(--glow);
+  background: var(--forest);
+  color: var(--bg);
+  box-shadow: 0 16px 40px -16px rgba(40, 55, 35, 0.6);
 }
-.btn--primary:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 22px 48px -16px var(--glow); }
+.btn--primary:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 24px 52px -18px rgba(40, 55, 35, 0.7); }
 .btn--ghost {
   background: var(--card-bg);
   border-color: var(--card-brd);

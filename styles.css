@@ -326,6 +326,12 @@ section { position: relative; }
 section[id] { scroll-margin-top: 86px; }
 
 .section-head { max-width: 720px; margin: 0 auto 64px; text-align: center; padding: 0 24px; }
+.lottie-accent {
+  display: block;
+  width: 76px; height: 76px;
+  margin: 0 auto 10px;
+}
+.lottie-accent--lg { width: 104px; height: 104px; margin-bottom: 6px; }
 .eyebrow {
   font-size: 0.74rem; letter-spacing: 0.32em; text-transform: uppercase;
   color: var(--accent); font-weight: 600;
@@ -354,12 +360,27 @@ section[id] { scroll-margin-top: 86px; }
   will-change: transform;
 }
 .btn--lg { padding: 17px 38px; font-size: 1rem; }
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+/* light sweep that glides across on hover */
+.btn::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+  transform: translateX(-130%);
+  transition: transform 0.75s var(--ease);
+  pointer-events: none;
+}
+.btn:hover::before { transform: translateX(130%); }
+.btn > * { position: relative; z-index: 2; }
+
 .btn--primary {
   background: var(--forest);
   color: var(--bg);
   box-shadow: 0 16px 40px -16px rgba(40, 55, 35, 0.6);
 }
-.btn--primary:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 24px 52px -18px rgba(40, 55, 35, 0.7); }
+.btn--primary:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 26px 56px -18px rgba(40, 55, 35, 0.72); }
+.btn--primary:active { transform: translateY(-1px) scale(0.99); }
+
 .btn--ghost {
   background: var(--card-bg);
   border-color: var(--card-brd);
@@ -367,7 +388,15 @@ section[id] { scroll-margin-top: 86px; }
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
-.btn--ghost:hover { transform: translateY(-3px); border-color: var(--accent); color: var(--accent); }
+/* ghost fills with brand forest on hover */
+.btn--ghost:hover {
+  transform: translateY(-3px);
+  background: var(--forest);
+  border-color: var(--forest);
+  color: var(--bg);
+  box-shadow: 0 22px 48px -20px rgba(40, 55, 35, 0.55);
+}
+.btn--ghost:active { transform: translateY(-1px); }
 
 /* ============================================================
    HERO

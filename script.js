@@ -24,6 +24,11 @@
      HTML ships with PT text; the dictionary holds EN. applyLang swaps
      textContent for every [data-i18n]; PT just restores from the dict.  */
   const I18N = {
+    "nav.vision": { en: "Vision" },
+    "nav.program": { en: "Program" },
+    "nav.journey": { en: "Journey" },
+    "nav.rhythm": { en: "Rhythm" },
+    "nav.movement": { en: "Movement" },
     "meta.title": { en: "Vida Bela — Shape the Lifestyle You Deserve" },
     "hero.badge": { en: "Vida Bela Club" },
     "hero.title": { en: "Shape the Lifestyle You Deserve" },
@@ -253,6 +258,58 @@
       applyLang(root.getAttribute("lang") === "en" ? "pt" : "en");
     });
   }
+
+  /* ---------- NAVIGATION ---------- */
+  const topbar = document.getElementById("topbar");
+  const nav = document.getElementById("nav");
+  const navToggle = document.getElementById("navToggle");
+  const navLinks = Array.from(document.querySelectorAll(".navlink"));
+
+  if (navToggle && nav) {
+    navToggle.addEventListener("click", () => {
+      const open = nav.classList.toggle("is-open");
+      navToggle.setAttribute("aria-expanded", String(open));
+    });
+    nav.addEventListener("click", (e) => {
+      if (e.target.closest(".navlink")) {
+        nav.classList.remove("is-open");
+        navToggle.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+
+  // solid backing once scrolled past the hero
+  if (topbar) {
+    const onScrollBar = () => topbar.classList.toggle("is-stuck", window.scrollY > 40);
+    window.addEventListener("scroll", onScrollBar, { passive: true });
+    onScrollBar();
+  }
+
+  // highlight the section currently in view
+  if (navLinks.length && "IntersectionObserver" in window) {
+    const byId = new Map(navLinks.map((l) => [l.getAttribute("href").slice(1), l]));
+    const sections = Array.from(byId.keys())
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+    const navIO = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          navLinks.forEach((l) => l.classList.remove("is-active"));
+          const link = byId.get(e.target.id);
+          if (link) link.classList.add("is-active");
+        }
+      });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    sections.forEach((s) => navIO.observe(s));
+  }
+
+  /* ---------- STAGGER ---------- */
+  // give cards within a group an incremental delay so they cascade in 3D
+  document.querySelectorAll(".cards, .phase-track, .trail, .ripple-track").forEach((group) => {
+    Array.from(group.querySelectorAll(":scope > [data-reveal]")).forEach((el, i) => {
+      el.style.setProperty("--i", i);
+    });
+  });
 
   /* ---------- SCROLL REVEAL ---------- */
   const revealEls = document.querySelectorAll("[data-reveal]");

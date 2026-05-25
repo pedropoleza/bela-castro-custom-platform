@@ -27,9 +27,19 @@
   </div>
 
   <!-- ====================== TOP BAR ====================== -->
-  <header class="topbar">
+  <header class="topbar" id="topbar">
     <a class="brand" href="#hero">Vida Bela</a>
+    <nav class="topbar__nav" id="nav">
+      <a class="navlink" href="#vision" data-i18n="nav.vision">Visão</a>
+      <a class="navlink" href="#ecosystem" data-i18n="nav.program">Programa</a>
+      <a class="navlink" href="#phases" data-i18n="nav.journey">Jornada</a>
+      <a class="navlink" href="#flow" data-i18n="nav.rhythm">Ritmo</a>
+      <a class="navlink" href="#movement" data-i18n="nav.movement">Movimento</a>
+    </nav>
     <div class="topbar__controls">
+      <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
       <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">
         <span class="lang-toggle__opt" data-lang-label="pt">PT</span>
         <span class="lang-toggle__sep">/</span>
@@ -122,7 +132,8 @@
         <p data-i18n="eco.lead">A Vida Bela não é mais um programa de fitness ou mentalidade. É um ecossistema integrado que cuida de cada dimensão da vida de uma mulher — mente, corpo e alma — em harmonia, para criar mudança duradoura.</p>
       </header>
       <div class="cards cards--3">
-        <article class="card card--list reveal" data-reveal data-tilt>
+        <article class="card card--list card--media reveal" data-reveal data-tilt>
+          <div class="card__media"><img src="https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=720&q=70&auto=format&fit=crop" alt="" loading="lazy" /></div>
           <h3 data-i18n="eco.c1.t">Disciplina Mental</h3>
           <ul>
             <li data-i18n="eco.c1.i1">Coaching personalizado</li>
@@ -130,7 +141,8 @@
             <li data-i18n="eco.c1.i3">Sistemas de responsabilidade</li>
           </ul>
         </article>
-        <article class="card card--list reveal" data-reveal data-tilt>
+        <article class="card card--list card--media reveal" data-reveal data-tilt>
+          <div class="card__media"><img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=720&q=70&auto=format&fit=crop" alt="" loading="lazy" /></div>
           <h3 data-i18n="eco.c2.t">Bem-estar Físico</h3>
           <ul>
             <li data-i18n="eco.c2.i1">Biblioteca de treinos guiados</li>
@@ -138,7 +150,8 @@
             <li data-i18n="eco.c2.i3">Construção de rotina saudável</li>
           </ul>
         </article>
-        <article class="card card--list reveal" data-reveal data-tilt>
+        <article class="card card--list card--media reveal" data-reveal data-tilt>
+          <div class="card__media"><img src="https://images.unsplash.com/photo-1552693673-1bf958298935?w=720&q=70&auto=format&fit=crop" alt="" loading="lazy" /></div>
           <h3 data-i18n="eco.c3.t">Resiliência Emocional</h3>
           <ul>
             <li data-i18n="eco.c3.i1">Práticas de meditação</li>
@@ -157,32 +170,38 @@
         <p data-i18n="mem.lead">Cada elemento da associação Vida Bela foi pensado para apoiar sua transformação completa — para que você sempre saiba o próximo passo e nunca se sinta sozinha na jornada.</p>
       </header>
       <div class="cards cards--3">
-        <article class="card reveal" data-reveal data-tilt>
+        <article class="card card--media reveal" data-reveal data-tilt>
+          <div class="card__media"><img src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=720&q=70&auto=format&fit=crop" alt="" loading="lazy" /></div>
           <span class="card__n">01</span>
           <h3 data-i18n="mem.c1.t">Biblioteca de Treinos</h3>
           <p data-i18n="mem.c1.d">Treinos guiados sob demanda para todo nível e agenda.</p>
         </article>
-        <article class="card reveal" data-reveal data-tilt>
+        <article class="card card--media reveal" data-reveal data-tilt>
+          <div class="card__media"><img src="https://images.unsplash.com/photo-1518611012118-696072aa579a?w=720&q=70&auto=format&fit=crop" alt="" loading="lazy" /></div>
           <span class="card__n">02</span>
           <h3 data-i18n="mem.c2.t">Meditação & Respiração</h3>
           <p data-i18n="mem.c2.d">Sessões calmantes para reduzir o estresse e construir quietude interior.</p>
         </article>
-        <article class="card reveal" data-reveal data-tilt>
+        <article class="card card--media reveal" data-reveal data-tilt>
+          <div class="card__media"><img src="https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=720&q=70&auto=format&fit=crop" alt="" loading="lazy" /></div>
           <span class="card__n">03</span>
           <h3 data-i18n="mem.c3.t">Coaching Semanal</h3>
           <p data-i18n="mem.c3.d">Sessões de coaching em grupo ao vivo para guiar, desafiar e inspirar seu crescimento.</p>
         </article>
-        <article class="card reveal" data-reveal data-tilt>
+        <article class="card card--media reveal" data-reveal data-tilt>
+          <div class="card__media"><img src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=720&q=70&auto=format&fit=crop" alt="" loading="lazy" /></div>
           <span class="card__n">04</span>
           <h3 data-i18n="mem.c4.t">Guias de Transformação</h3>
           <p data-i18n="mem.c4.d">Guias temáticos mensais com hábitos, ferramentas e passos de ação.</p>
         </article>
-        <article class="card reveal" data-reveal data-tilt>
+        <article class="card card--media reveal" data-reveal data-tilt>
+          <div class="card__media"><img src="https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=720&q=70&auto=format&fit=crop" alt="" loading="lazy" /></div>
           <span class="card__n">05</span>
           <h3 data-i18n="mem.c5.t">Responsabilidade & Comunidade</h3>
           <p data-i18n="mem.c5.d">Uma irmandade que te sustenta nos seus padrões mais altos.</p>
         </article>
-        <article class="card reveal" data-reveal data-tilt>
+        <article class="card card--media reveal" data-reveal data-tilt>
+          <div class="card__media"><img src="https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=720&q=70&auto=format&fit=crop" alt="" loading="lazy" /></div>
           <span class="card__n">06</span>
           <h3 data-i18n="mem.c6.t">Desafios & Acompanhamento</h3>
           <p data-i18n="mem.c6.d">Ferramentas de hábitos e desafios de wellness para manter o ritmo vivo.</p>
@@ -438,7 +457,8 @@
     </section>
 
     <!-- ---------- 10. FINAL CTA / SUMMIT ---------- -->
-    <section class="summit" id="summit">
+    <section class="summit summit--photo" id="summit">
+      <div class="summit__photo"><img src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1600&q=72&auto=format&fit=crop" alt="" loading="lazy" /></div>
       <div class="summit__inner reveal" data-reveal>
         <span class="eyebrow eyebrow--light" data-i18n="cta.eyebrow">Junte-se a nós</span>
         <h2 data-i18n="cta.title">Molde o estilo de vida que você merece</h2>

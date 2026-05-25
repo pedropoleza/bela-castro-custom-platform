@@ -54,6 +54,12 @@
 
   <!-- ====================== CONTENT ====================== -->
   <main>
+    <!-- growing branch that threads the whole page and drives the scroll animation -->
+    <svg class="vine" id="vine" aria-hidden="true" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path class="vine__path vine__path--glow" id="vinePathGlow" />
+      <path class="vine__path" id="vinePath" />
+      <g id="vineLeaves"></g>
+    </svg>
     <!-- ---------- 1. HERO ---------- -->
     <section class="hero" id="hero">
       <div class="hero__inner reveal" data-reveal>
@@ -468,12 +474,58 @@
         <p data-i18n="cta.lead">Mais que um programa. Mais que uma plataforma. A Vida Bela é um movimento de mulheres que escolhem a si mesmas, sua cura e sua liberdade todos os dias.</p>
         <a class="btn btn--primary btn--lg" href="#hero" data-i18n="cta.btn">Fazer parte da Vida Bela</a>
       </div>
-      <footer class="foot">
-        <span>Vida Bela</span>
-        <span data-i18n="foot.tag">Um estilo de vida, não um programa</span>
-      </footer>
     </section>
   </main>
+
+  <!-- ====================== FOOTER ====================== -->
+  <footer class="site-footer" id="footer">
+    <div class="site-footer__main">
+      <div class="site-footer__brand">
+        <a class="brand brand--footer" href="#hero">Vida Bela</a>
+        <p class="site-footer__tag" data-i18n="foot.tag">Um estilo de vida, não um programa</p>
+        <div class="site-footer__social">
+          <a href="#" aria-label="Instagram" class="social">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg>
+          </a>
+          <a href="#" aria-label="Facebook" class="social">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 8.5h2V5.5h-2.4C11.6 5.5 10.5 7 10.5 9v1.5H8.5v3h2V21h3v-7.5H16l.5-3h-3V9c0-.4.2-.5.6-.5Z"/></svg>
+          </a>
+          <a href="#" aria-label="YouTube" class="social">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="12" rx="4"/><path d="M11 9.5l4 2.5-4 2.5z" fill="currentColor" stroke="none"/></svg>
+          </a>
+        </div>
+      </div>
+      <nav class="site-footer__cols">
+        <div class="footcol">
+          <h4 data-i18n="foot.col1">Navegação</h4>
+          <a href="#vision" data-i18n="nav.vision">Visão</a>
+          <a href="#ecosystem" data-i18n="nav.program">Programa</a>
+          <a href="#phases" data-i18n="nav.journey">Jornada</a>
+          <a href="#flow" data-i18n="nav.rhythm">Ritmo</a>
+          <a href="#movement" data-i18n="nav.movement">Movimento</a>
+        </div>
+        <div class="footcol">
+          <h4 data-i18n="foot.col2">O ecossistema</h4>
+          <a href="#ecosystem" data-i18n="eco.c1.t">Disciplina Mental</a>
+          <a href="#ecosystem" data-i18n="eco.c2.t">Bem-estar Físico</a>
+          <a href="#ecosystem" data-i18n="eco.c3.t">Resiliência Emocional</a>
+          <a href="#membership" data-i18n="mem.title">O que as membros recebem</a>
+        </div>
+        <div class="footcol">
+          <h4 data-i18n="foot.col3">Comece agora</h4>
+          <a href="#membership" data-i18n="hero.cta1">Começar a jornada</a>
+          <a href="#summit" data-i18n="cta.btn">Fazer parte da Vida Bela</a>
+        </div>
+      </nav>
+    </div>
+    <div class="site-footer__bar">
+      <span data-i18n="foot.copy">© 2026 Vida Bela. Todos os direitos reservados.</span>
+      <div class="site-footer__legal">
+        <a href="#" data-i18n="foot.privacy">Privacidade</a>
+        <a href="#" data-i18n="foot.terms">Termos</a>
+      </div>
+    </div>
+  </footer>
 
   <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.8/dist/lottie-player.js"></script>
   <script src="script.js"></script>

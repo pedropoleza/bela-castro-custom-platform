@@ -226,7 +226,13 @@
     "cta.title": { en: "Shape the Lifestyle You Deserve" },
     "cta.lead": { en: "More than a program. More than a platform. Vida Bela is a movement of women who choose themselves, their healing, and their freedom every single day." },
     "cta.btn": { en: "Join Vida Bela" },
-    "foot.tag": { en: "A lifestyle, not a program" }
+    "foot.tag": { en: "A lifestyle, not a program" },
+    "foot.col1": { en: "Navigation" },
+    "foot.col2": { en: "The ecosystem" },
+    "foot.col3": { en: "Start now" },
+    "foot.copy": { en: "© 2026 Vida Bela. All rights reserved." },
+    "foot.privacy": { en: "Privacy" },
+    "foot.terms": { en: "Terms" }
   };
 
   // capture original PT text once so we can restore it
@@ -308,6 +314,8 @@
   document.querySelectorAll(".cards, .phase-track, .trail, .ripple-track").forEach((group) => {
     Array.from(group.querySelectorAll(":scope > [data-reveal]")).forEach((el, i) => {
       el.style.setProperty("--i", i);
+      // alternate slide-in direction for a livelier, more intense entrance
+      el.style.setProperty("--dx", (i % 2 === 0 ? -1 : 1).toString());
     });
   });
 
@@ -327,7 +335,110 @@
     revealEls.forEach((el) => el.classList.add("is-visible"));
   }
 
-  if (prefersReduced) return; // skip motion-heavy work
+  /* ---------- THE VINE — branch that draws as you scroll ----------
+     A meandering path is generated in pixel space across the full document
+     height. Scroll progress maps to stroke-dashoffset so the branch "grows",
+     and leaves/buds along it bloom as the drawing tip passes them.          */
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const vineSvg = document.getElementById("vine");
+  const vinePath = document.getElementById("vinePath");
+  const vineGlow = document.getElementById("vinePathGlow");
+  const leavesG = document.getElementById("vineLeaves");
+  const leafEls = [];
+  let vineLen = 0;
+  let vh2 = window.innerHeight;
+
+  const vineX = (y, cx, amp) =>
+    cx + Math.sin(y * 0.005) * amp + Math.sin(y * 0.013) * (amp * 0.32);
+
+  function addLeaf(cx, cy, angleDeg, size, kind) {
+    const g = document.createElementNS(SVGNS, "g");
+    g.setAttribute("transform", `translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${angleDeg.toFixed(1)})`);
+    let shape;
+    if (kind === "bud") {
+      shape = document.createElementNS(SVGNS, "circle");
+      shape.setAttribute("r", (size * 0.45).toFixed(1));
+      shape.setAttribute("class", "vine__bud");
+    } else {
+      const s = size;
+      shape = document.createElementNS(SVGNS, "path");
+      shape.setAttribute("d",
+        `M0 0 C ${(s*0.62).toFixed(1)} ${(-s*0.5).toFixed(1)}, ${(s*0.5).toFixed(1)} ${(-s*1.45).toFixed(1)}, 0 ${(-s*1.95).toFixed(1)} ` +
+        `C ${(-s*0.5).toFixed(1)} ${(-s*1.45).toFixed(1)}, ${(-s*0.62).toFixed(1)} ${(-s*0.5).toFixed(1)}, 0 0 Z`);
+      shape.setAttribute("class", "vine__leaf");
+    }
+    g.appendChild(shape);
+    leavesG.appendChild(g);
+    leafEls.push({ y: cy, el: shape });
+  }
+
+  function buildVine() {
+    if (!vineSvg || !vinePath) return;
+    const W = document.documentElement.clientWidth;
+    const H = document.documentElement.scrollHeight;
+    vineSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    vineSvg.setAttribute("width", W);
+    vineSvg.setAttribute("height", H);
+    const cx = W * 0.5;
+    const amp = Math.min(W * 0.16, 150);
+
+    let d = "";
+    for (let y = 24; y <= H - 24; y += 22) {
+      const x = vineX(y, cx, amp);
+      d += (d === "" ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1) + " ";
+    }
+    vinePath.setAttribute("d", d);
+    vineGlow.setAttribute("d", d);
+
+    leavesG.innerHTML = "";
+    leafEls.length = 0;
+    const slope = (y) => (vineX(y + 1, cx, amp) - vineX(y - 1, cx, amp)) / 2;
+    document.querySelectorAll("main > section").forEach((sec, idx) => {
+      const yc = sec.offsetTop + Math.min(sec.offsetHeight * 0.5, 220);
+      const base = Math.atan(slope(yc)) * 180 / Math.PI;
+      const side = idx % 2 === 0 ? 1 : -1;
+      addLeaf(vineX(yc, cx, amp), yc, base + side * 58, 28, "leaf");
+      addLeaf(vineX(yc + 46, cx, amp), yc + 46, base - side * 50, 20, "leaf");
+    });
+    for (let y = 150; y < H - 150; y += 260) {
+      addLeaf(vineX(y, cx, amp), y, 0, 13, "bud");
+    }
+
+    vineLen = vinePath.getTotalLength();
+    vinePath.style.strokeDasharray = vineLen;
+    vineGlow.style.strokeDasharray = vineLen;
+  }
+
+  function drawVine() {
+    if (!vineLen) return;
+    const H = document.documentElement.scrollHeight;
+    const progress = Math.max(0, Math.min(1, (window.scrollY + vh2 * 0.92) / H));
+    const offset = vineLen * (1 - progress);
+    vinePath.style.strokeDashoffset = offset;
+    vineGlow.style.strokeDashoffset = offset;
+    const drawnY = progress * H;
+    for (let i = 0; i < leafEls.length; i++) {
+      leafEls[i].el.classList.toggle("bloom", leafEls[i].y <= drawnY);
+    }
+  }
+
+  buildVine();
+
+  if (prefersReduced) {
+    if (vinePath) { vinePath.style.strokeDashoffset = 0; vineGlow.style.strokeDashoffset = 0; }
+    leafEls.forEach((l) => l.el.classList.add("bloom"));
+    return; // skip motion-heavy work
+  }
+
+  let vineTick = false;
+  const onVineScroll = () => {
+    if (!vineTick) { vineTick = true; requestAnimationFrame(() => { drawVine(); vineTick = false; }); }
+  };
+  window.addEventListener("scroll", onVineScroll, { passive: true });
+  window.addEventListener("resize", () => { vh2 = window.innerHeight; buildVine(); drawVine(); });
+  window.addEventListener("load", () => { buildVine(); drawVine(); });
+  setTimeout(() => { buildVine(); drawVine(); }, 700);
+  drawVine();
 
   const fine = window.matchMedia("(pointer: fine)").matches;
   const PERSPECTIVE = 1200; // must match .scene { perspective }
@@ -373,8 +484,8 @@
      set by scroll + pointer; a render loop eases current → target (lerp)
      for a fluid, weighty, immersive feel.                                  */
   const camera = document.getElementById("camera");
-  const cur = { rx: 0, ry: 0, tx: 0, ty: 0, tz: 0 };
-  const tgt = { rx: 0, ry: 0, tx: 0, ty: 0, tz: 0 };
+  const cur = { rx: 0, ry: 0, rz: 0, tx: 0, ty: 0, tz: 0 };
+  const tgt = { rx: 0, ry: 0, rz: 0, tx: 0, ty: 0, tz: 0 };
   let pointerX = 0, pointerY = 0;
   let scrollY = window.scrollY;
   let vh = window.innerHeight;
@@ -382,26 +493,29 @@
 
   function updateTargets() {
     const p = scrollY / vh; // pages scrolled
-    // pointer drives rotation + lateral slide; scroll glides the camera
-    // forward (into the field) and downward through the atmosphere.
-    tgt.ry = pointerX * 7;          // deg
-    tgt.rx = -pointerY * 5;         // deg
-    tgt.tx = pointerX * -40;        // px
-    tgt.ty = scrollY * 0.12 - pointerY * 26;
-    tgt.tz = Math.min(p * 140, 360); // ease forward, capped
+    // Intensified ~2x: pointer drives stronger rotation + lateral slide;
+    // scroll glides the camera much further forward and downward, and adds
+    // a slow roll so the whole atmosphere feels alive.
+    tgt.ry = pointerX * 13;                 // deg
+    tgt.rx = -pointerY * 9;                  // deg
+    tgt.rz = Math.sin(p * 0.6) * 2.2;        // subtle roll with scroll
+    tgt.tx = pointerX * -72;                 // px
+    tgt.ty = scrollY * 0.2 - pointerY * 44;
+    tgt.tz = Math.min(p * 260, 620);         // ease forward, capped
   }
 
   function loop(now) {
     const k = 0.08; // easing factor
     cur.rx += (tgt.rx - cur.rx) * k;
     cur.ry += (tgt.ry - cur.ry) * k;
+    cur.rz += (tgt.rz - cur.rz) * k;
     cur.tx += (tgt.tx - cur.tx) * k;
     cur.ty += (tgt.ty - cur.ty) * k;
     cur.tz += (tgt.tz - cur.tz) * k;
 
     camera.style.transform =
       `translate3d(${cur.tx.toFixed(2)}px, ${cur.ty.toFixed(2)}px, ${cur.tz.toFixed(2)}px) ` +
-      `rotateX(${cur.rx.toFixed(3)}deg) rotateY(${cur.ry.toFixed(3)}deg)`;
+      `rotateX(${cur.rx.toFixed(3)}deg) rotateY(${cur.ry.toFixed(3)}deg) rotateZ(${cur.rz.toFixed(3)}deg)`;
 
     // drift the motes upward on their own phase (cheap, additive to depth)
     const t = (now - t0) / 1000;

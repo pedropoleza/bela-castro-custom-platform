@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Vida Bela CRM Flow — a weekly communication rhythm designed to empower women through mindset, movement, wellness, emotional awareness and intentional living." />
+  <title>Vida Bela — A Rhythm for Transformation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ====================== ATMOSPHERIC MOUNTAIN SCENE ====================== -->
+  <div class="scene" id="scene" aria-hidden="true">
+    <div class="scene__sky"></div>
+    <div class="scene__glow" data-depth="0.02"></div>
+
+    <!-- Layer 1 — far background mountains -->
+    <svg class="range range--far" data-speed="0.12" viewBox="0 0 1440 600" preserveAspectRatio="xMidYMax slice">
+      <path d="M0 600 L0 340 L120 300 L260 360 L420 250 L560 330 L720 220 L880 320 L1040 240 L1200 330 L1320 280 L1440 330 L1440 600 Z" />
+    </svg>
+
+    <!-- Layer 2 — middle mountains -->
+    <svg class="range range--mid" data-speed="0.26" viewBox="0 0 1440 600" preserveAspectRatio="xMidYMax slice">
+      <path d="M0 600 L0 430 L160 360 L320 440 L470 330 L640 430 L800 320 L980 430 L1140 350 L1300 440 L1440 380 L1440 600 Z" />
+    </svg>
+
+    <!-- mist between mid and near -->
+    <div class="mist mist--a" data-speed="0.34"></div>
+
+    <!-- Layer 3 — foreground terrain -->
+    <svg class="range range--near" data-speed="0.46" viewBox="0 0 1440 600" preserveAspectRatio="xMidYMax slice">
+      <path d="M0 600 L0 500 L200 440 L380 510 L560 430 L760 520 L960 440 L1160 520 L1340 460 L1440 500 L1440 600 Z" />
+    </svg>
+
+    <!-- closest terrain shadow -->
+    <svg class="range range--fore" data-speed="0.7" viewBox="0 0 1440 400" preserveAspectRatio="xMidYMax slice">
+      <path d="M0 400 L0 320 L240 360 L480 300 L760 370 L1040 310 L1280 360 L1440 330 L1440 400 Z" />
+    </svg>
+
+    <!-- drifting fog + particles -->
+    <div class="mist mist--b" data-speed="0.55"></div>
+    <div class="particles" id="particles"></div>
+    <div class="scene__vignette"></div>
+  </div>
+
+  <!-- ====================== THEME TOGGLE ====================== -->
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light and dark theme">
+    <svg class="icon icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+    <svg class="icon icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.22 4.22l1.7 1.7M18.08 18.08l1.7 1.7M2 12h2.4M19.6 12H22M4.22 19.78l1.7-1.7M18.08 5.92l1.7-1.7"/></svg>
+  </button>
+
+  <!-- ====================== CONTENT ====================== -->
+  <main>
+    <!-- ---------- HERO ---------- -->
+    <section class="hero" id="hero">
+      <div class="hero__inner reveal" data-reveal>
+        <span class="badge">Vida Bela CRM Flow</span>
+        <h1 class="hero__title">A Weekly Communication Rhythm Designed to Empower Women</h1>
+        <p class="hero__sub">A structured CRM experience that nurtures mindset, movement, wellness, emotional awareness, and intentional living — one day at a time.</p>
+        <div class="hero__actions">
+          <a class="btn btn--primary" href="#flow">Explore Weekly Flow</a>
+          <a class="btn btn--ghost" href="#strategy">View CRM Strategy</a>
+        </div>
+      </div>
+      <a class="scroll-hint" href="#flow" aria-label="Scroll to weekly flow">
+        <span class="scroll-hint__text">Begin the ascent</span>
+        <span class="scroll-hint__mouse"><span class="scroll-hint__wheel"></span></span>
+      </a>
+    </section>
+
+    <!-- ---------- WEEKLY FLOW ---------- -->
+    <section class="flow" id="flow">
+      <header class="section-head reveal" data-reveal>
+        <span class="eyebrow">The Journey</span>
+        <h2>Seven Days. One Elevation.</h2>
+        <p>Each day is a waypoint on the trail — a deliberate stop that builds rhythm, expectation, and emotional momentum as members climb through the week.</p>
+      </header>
+
+      <ol class="trail">
+        <li class="day reveal" data-reveal data-tilt>
+          <span class="day__index">01</span>
+          <div class="day__card">
+            <span class="day__name">Monday</span>
+            <span class="day__theme">Motivation &amp; Mindset</span>
+            <p class="day__lead">Start the week aligned and strengthened.</p>
+            <p class="day__obj"><strong>Objective.</strong> Help women begin the week with clarity, intention, discipline, and emotional strength.</p>
+            <ul class="day__ideas">
+              <li>Mindset shifts</li>
+              <li>Self-confidence reminders</li>
+              <li>Self-esteem and identity</li>
+              <li>Discipline over motivation</li>
+              <li>Encouragement to take action</li>
+              <li>Weekly intention setting</li>
+            </ul>
+            <p class="day__goal">Create emotional momentum and positive energy for the week.</p>
+          </div>
+        </li>
+
+        <li class="day day--right reveal" data-reveal data-tilt>
+          <span class="day__index">02</span>
+          <div class="day__card">
+            <span class="day__name">Tuesday</span>
+            <span class="day__theme">Train Yourself</span>
+            <p class="day__lead">Physical wellbeing &amp; self-discipline.</p>
+            <p class="day__obj"><strong>Objective.</strong> Encourage movement, body awareness, consistency, and physical strengthening.</p>
+            <ul class="day__ideas">
+              <li>Workout reminders</li>
+              <li>Fitness motivation</li>
+              <li>Movement challenges</li>
+              <li>Stretching and mobility</li>
+              <li>Importance of consistency</li>
+              <li>“Train your body, train your mind”</li>
+            </ul>
+            <p class="day__goal">Reinforce healthy habits and the connection between physical and mental strength.</p>
+          </div>
+        </li>
+
+        <li class="day reveal" data-reveal data-tilt>
+          <span class="day__index">03</span>
+          <div class="day__card">
+            <span class="day__name">Wednesday</span>
+            <span class="day__theme">Wellness Tip</span>
+            <p class="day__lead">Nutrition, habits &amp; lifestyle.</p>
+            <p class="day__obj"><strong>Objective.</strong> Educate women on how to create a healthier and more sustainable lifestyle.</p>
+            <ul class="day__ideas">
+              <li>Nutrition tips</li>
+              <li>Healthy habits</li>
+              <li>Nervous system regulation</li>
+              <li>Sleep quality</li>
+              <li>Hormonal health</li>
+              <li>Energy management</li>
+              <li>Hydration</li>
+              <li>Lifestyle improvements</li>
+            </ul>
+            <p class="day__goal">Help women implement small consistent changes.</p>
+          </div>
+        </li>
+
+        <li class="day day--right reveal" data-reveal data-tilt>
+          <span class="day__index">04</span>
+          <div class="day__card">
+            <span class="day__name">Thursday</span>
+            <span class="day__theme">Gratitude &amp; Emotional Awareness</span>
+            <p class="day__lead">Inner peace &amp; emotional balance.</p>
+            <p class="day__obj"><strong>Objective.</strong> Create emotional grounding and strengthen mindfulness practices.</p>
+            <ul class="day__ideas">
+              <li>Gratitude exercises</li>
+              <li>Reflection questions</li>
+              <li>Journaling</li>
+              <li>Emotional awareness</li>
+              <li>Presence and mindfulness</li>
+              <li>Positive affirmations</li>
+            </ul>
+            <p class="day__goal">Help women emotionally reconnect with themselves.</p>
+          </div>
+        </li>
+
+        <li class="day reveal" data-reveal data-tilt>
+          <span class="day__index">05</span>
+          <div class="day__card">
+            <span class="day__name">Friday</span>
+            <span class="day__theme">Wellness Curiosity</span>
+            <p class="day__lead">Light, educational &amp; fun content.</p>
+            <p class="day__obj"><strong>Objective.</strong> Keep the community engaged in a light and inspiring way.</p>
+            <ul class="day__ideas">
+              <li>Health curiosities</li>
+              <li>Brain and body facts</li>
+              <li>Mental health</li>
+              <li>Hormones and energy</li>
+              <li>Longevity</li>
+              <li>Self-care ideas</li>
+              <li>“Did you know?” style content</li>
+            </ul>
+            <p class="day__goal">Educate while creating a positive and fun experience.</p>
+          </div>
+        </li>
+
+        <li class="day day--right day--quiet reveal" data-reveal data-tilt>
+          <span class="day__index">06</span>
+          <div class="day__card">
+            <span class="day__name">Saturday</span>
+            <span class="day__theme">Offline Presence Day</span>
+            <p class="day__lead">Rest, presence &amp; real connection.</p>
+            <p class="day__obj"><strong>Objective.</strong> Allow participants to disconnect from notifications and live in the present.</p>
+            <p class="day__nomsg">No messages sent — a pause in the journey.</p>
+            <ul class="day__ideas">
+              <li>Family</li>
+              <li>Nature</li>
+              <li>Movement</li>
+              <li>Joy</li>
+              <li>Presence</li>
+              <li>Real experiences</li>
+            </ul>
+            <p class="day__goal">Promote balance and healthy boundaries with digital communication.</p>
+          </div>
+        </li>
+
+        <li class="day reveal" data-reveal data-tilt>
+          <span class="day__index">07</span>
+          <div class="day__card">
+            <span class="day__name">Sunday</span>
+            <span class="day__theme">Reset &amp; Preparation</span>
+            <p class="day__lead">Reflection, planning &amp; alignment.</p>
+            <p class="day__obj"><strong>Objective.</strong> Help women prepare emotionally and mentally for the new week.</p>
+            <ul class="day__ideas">
+              <li>Weekly reset checklist</li>
+              <li>Meal prep</li>
+              <li>Journaling</li>
+              <li>Weekly planning</li>
+              <li>Habit tracking</li>
+              <li>Intention setting</li>
+              <li>Reflection exercises</li>
+              <li>Sunday meditation</li>
+            </ul>
+            <p class="day__goal">Create structure, clarity, and intentionality for the new week.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ---------- STRATEGY ---------- -->
+    <section class="strategy" id="strategy">
+      <div class="section-head reveal" data-reveal>
+        <span class="eyebrow">The Methodology</span>
+        <h2>Simple. Sustainable. Transformational.</h2>
+        <p>Each day has a clear emotional and behavioral purpose. Instead of overwhelming members with random messages, the CRM creates rhythm, expectation, and consistency — helping women build identity, habits, and emotional resilience over time.</p>
+      </div>
+      <div class="pillars">
+        <article class="pillar reveal" data-reveal data-tilt><span class="pillar__n">I</span><h3>Mindset</h3><p>Clarity and intention as the foundation of every week.</p></article>
+        <article class="pillar reveal" data-reveal data-tilt><span class="pillar__n">II</span><h3>Movement</h3><p>Body awareness and discipline that strengthen the mind.</p></article>
+        <article class="pillar reveal" data-reveal data-tilt><span class="pillar__n">III</span><h3>Wellness</h3><p>Sustainable habits built one small change at a time.</p></article>
+        <article class="pillar reveal" data-reveal data-tilt><span class="pillar__n">IV</span><h3>Emotional Awareness</h3><p>Grounding, gratitude, and reconnection with the self.</p></article>
+        <article class="pillar reveal" data-reveal data-tilt><span class="pillar__n">V</span><h3>Reset</h3><p>Reflection and preparation that close one cycle and open the next.</p></article>
+      </div>
+    </section>
+
+    <!-- ---------- FINAL CTA / SUMMIT ---------- -->
+    <section class="summit" id="summit">
+      <div class="summit__inner reveal" data-reveal>
+        <span class="eyebrow eyebrow--light">The Summit</span>
+        <h2>More than messages. A rhythm for transformation.</h2>
+        <p>Vida Bela’s weekly CRM flow turns communication into a guided experience — supporting women with clarity, consistency, and care throughout the week.</p>
+        <a class="btn btn--primary btn--lg" href="#hero">Build This CRM Flow</a>
+      </div>
+      <footer class="foot">
+        <span>Vida Bela</span>
+        <span>A rhythm for transformation</span>
+      </footer>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

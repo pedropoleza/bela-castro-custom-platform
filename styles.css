@@ -195,7 +195,7 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    THE VINE — branch that threads the page & draws on scroll
    ============================================================ */
-main { position: relative; }
+main { position: relative; perspective: 1600px; }
 .vine {
   position: absolute;
   top: 0; left: 0;
@@ -204,7 +204,10 @@ main { position: relative; }
   pointer-events: none;
   overflow: visible;
 }
-main > section { position: relative; z-index: 1; }
+/* sections sit forward of the vine and get scroll-linked depth (set in JS):
+   they rise from the back as they approach, then push toward the viewer and
+   recede as they scroll past — the "coming out of the screen" feel */
+main > section { position: relative; z-index: 1; transform-origin: center 42%; will-change: transform, opacity; }
 
 .vine__path {
   fill: none;
@@ -220,33 +223,59 @@ main > section { position: relative; z-index: 1; }
   opacity: 0.9;
   filter: blur(6px);
 }
+/* leaves use individual transform props so idle sway (rotate) can run
+   independently of the bloom (scale) transition */
 .vine__leaf {
   fill: var(--vine);
   opacity: 0;
-  transform: scale(0) rotate(-12deg);
+  scale: 0;
   transform-box: fill-box;
   transform-origin: 50% 100%;
-  transition: opacity 0.7s var(--ease), transform 0.9s var(--ease);
+  transition: opacity 0.7s var(--ease), scale 0.9s var(--ease);
 }
-.vine__leaf.bloom { opacity: 0.88; transform: scale(1) rotate(0deg); }
+.vine__leaf.bloom { opacity: 0.9; scale: 1; animation: leafSway 6s ease-in-out infinite; }
+
 .vine__twig {
   fill: none;
   stroke: var(--vine);
   stroke-width: 2.5;
   stroke-linecap: round;
   opacity: 0;
+  stroke-dasharray: 1 1;
   transition: opacity 0.7s var(--ease);
 }
-.vine__twig.bloom { opacity: 0.7; }
+.vine__twig.bloom { opacity: 0.78; }
+
 .vine__bud {
   fill: var(--clay);
   opacity: 0;
-  transform: scale(0);
+  scale: 0;
   transform-box: fill-box;
   transform-origin: center;
-  transition: opacity 0.6s var(--ease), transform 0.7s var(--ease);
+  transition: opacity 0.6s var(--ease), scale 0.7s var(--ease);
 }
-.vine__bud.bloom { opacity: 0.9; transform: scale(1); }
+.vine__bud.bloom { opacity: 0.9; scale: 1; }
+
+/* flowers — petals around a warm center, with a gentle idle bloom-breathe */
+.vine__flower {
+  opacity: 0;
+  scale: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 0.8s var(--ease), scale 1s var(--ease);
+}
+.vine__flower.bloom { opacity: 1; scale: 1; animation: flowerBreathe 7s ease-in-out infinite; }
+.vine__flower .petal { fill: var(--bloom-petal, #d98a86); }
+.vine__flower .core { fill: var(--clay); }
+
+@keyframes leafSway {
+  0%, 100% { rotate: -5deg; }
+  50% { rotate: 5deg; }
+}
+@keyframes flowerBreathe {
+  0%, 100% { rotate: -6deg; }
+  50% { rotate: 6deg; }
+}
 
 /* ============================================================
    TOP BAR  (brand + language + theme)

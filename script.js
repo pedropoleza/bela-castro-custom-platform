@@ -348,8 +348,9 @@
   let vineLen = 0;
   let vh2 = window.innerHeight;
 
-  const vineX = (y, cx, amp) =>
-    cx + Math.sin(y * 0.005) * amp + Math.sin(y * 0.013) * (amp * 0.32);
+  // stem anchored to the LEFT side, entering from the top-left corner
+  const vineX = (y, W) =>
+    W * 0.085 + Math.sin(y * 0.0042) * (W * 0.055) + Math.sin(y * 0.0115) * (W * 0.022);
 
   function addLeaf(cx, cy, angleDeg, size, kind) {
     const g = document.createElementNS(SVGNS, "g");
@@ -372,6 +373,34 @@
     leafEls.push({ y: cy, el: shape });
   }
 
+  function addTwig(x1, y1, x2, y2) {
+    const p = document.createElementNS(SVGNS, "path");
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - 18;
+    p.setAttribute("d", `M${x1.toFixed(1)} ${y1.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`);
+    p.setAttribute("class", "vine__twig");
+    leavesG.appendChild(p);
+    leafEls.push({ y: Math.min(y1, y2), el: p });
+  }
+
+  function addFlower(cx, cy, size) {
+    const g = document.createElementNS(SVGNS, "g");
+    g.setAttribute("transform", `translate(${cx.toFixed(1)} ${cy.toFixed(1)})`);
+    g.setAttribute("class", "vine__flower");
+    for (let i = 0; i < 5; i++) {
+      const e = document.createElementNS(SVGNS, "ellipse");
+      e.setAttribute("cx", "0"); e.setAttribute("cy", (-size).toFixed(1));
+      e.setAttribute("rx", (size * 0.42).toFixed(1)); e.setAttribute("ry", (size * 0.82).toFixed(1));
+      e.setAttribute("class", "petal");
+      e.setAttribute("transform", `rotate(${i * 72})`);
+      g.appendChild(e);
+    }
+    const c = document.createElementNS(SVGNS, "circle");
+    c.setAttribute("r", (size * 0.4).toFixed(1)); c.setAttribute("class", "core");
+    g.appendChild(c);
+    leavesG.appendChild(g);
+    leafEls.push({ y: cy, el: g });
+  }
+
   function buildVine() {
     if (!vineSvg || !vinePath) return;
     const W = document.documentElement.clientWidth;
@@ -379,30 +408,45 @@
     vineSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     vineSvg.setAttribute("width", W);
     vineSvg.setAttribute("height", H);
-    const cx = W * 0.5;
-    const amp = Math.min(W * 0.16, 150);
 
-    let d = "";
-    for (let y = 24; y <= H - 24; y += 22) {
-      const x = vineX(y, cx, amp);
-      d += (d === "" ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1) + " ";
+    // grow the stem down from the top-left corner
+    let d = "M " + (W * 0.02).toFixed(1) + " -24 ";
+    for (let y = 0; y <= H - 18; y += 20) {
+      d += "L " + vineX(y, W).toFixed(1) + " " + y + " ";
     }
     vinePath.setAttribute("d", d);
     vineGlow.setAttribute("d", d);
 
     leavesG.innerHTML = "";
     leafEls.length = 0;
-    const slope = (y) => (vineX(y + 1, cx, amp) - vineX(y - 1, cx, amp)) / 2;
-    document.querySelectorAll("main > section").forEach((sec, idx) => {
-      const yc = sec.offsetTop + Math.min(sec.offsetHeight * 0.5, 220);
-      const base = Math.atan(slope(yc)) * 180 / Math.PI;
-      const side = idx % 2 === 0 ? 1 : -1;
-      addLeaf(vineX(yc, cx, amp), yc, base + side * 58, 28, "leaf");
-      addLeaf(vineX(yc + 46, cx, amp), yc + 46, base - side * 50, 20, "leaf");
+    const slope = (y) => (vineX(y + 1, W) - vineX(y - 1, W)) / 2;
+    const angAt = (y) => Math.atan(slope(y)) * 180 / Math.PI;
+    const reach = Math.min(W * 0.1, 130);
+
+    const sections = Array.from(document.querySelectorAll("main > section"));
+    sections.forEach((sec, idx) => {
+      const yc = sec.offsetTop + Math.min(sec.offsetHeight * 0.42, 200);
+      const sx = vineX(yc, W);
+      // a tendril reaching from the stem toward the content
+      const tx = sx + reach, ty = yc - 26;
+      addTwig(sx, yc, tx, ty);
+      addLeaf(tx, ty, angAt(yc) + 42, 26, "leaf");
+      // flowers bloom on alternating section nodes
+      if (idx % 2 === 0) addFlower(tx + 12, ty - 22, 15);
+      else addLeaf(sx + 26, yc + 38, angAt(yc) - 58, 20, "leaf");
+      // a leaf hugging the stem opposite the tendril
+      addLeaf(sx, yc - 64, angAt(yc) - 120, 18, "leaf");
     });
-    for (let y = 150; y < H - 150; y += 260) {
-      addLeaf(vineX(y, cx, amp), y, 0, 13, "bud");
-    }
+
+    // hero flourish — a lush cluster near the top-left corner
+    const hx = vineX(150, W);
+    addTwig(hx, 180, hx + reach * 1.2, 96);
+    addFlower(hx + reach * 1.2, 80, 21);
+    addLeaf(hx + reach * 0.6, 150, 34, 32, "leaf");
+    addLeaf(hx - 6, 96, -44, 26, "leaf");
+
+    // scattered buds along the stem
+    for (let y = 240; y < H - 160; y += 300) addLeaf(vineX(y, W), y, 0, 12, "bud");
 
     vineLen = vinePath.getTotalLength();
     vinePath.style.strokeDasharray = vineLen;
@@ -430,6 +474,15 @@
     return; // skip motion-heavy work
   }
 
+  // hero flourish: animate the branch growing in on load, then hand off to scroll
+  const GROW = "stroke-dashoffset 1.9s cubic-bezier(0.22,1,0.36,1)";
+  vinePath.style.transition = GROW;
+  vineGlow.style.transition = GROW;
+  vinePath.style.strokeDashoffset = vineLen;
+  vineGlow.style.strokeDashoffset = vineLen;
+  requestAnimationFrame(() => requestAnimationFrame(drawVine));
+  setTimeout(() => { vinePath.style.transition = ""; vineGlow.style.transition = ""; }, 2000);
+
   let vineTick = false;
   const onVineScroll = () => {
     if (!vineTick) { vineTick = true; requestAnimationFrame(() => { drawVine(); vineTick = false; }); }
@@ -438,7 +491,6 @@
   window.addEventListener("resize", () => { vh2 = window.innerHeight; buildVine(); drawVine(); });
   window.addEventListener("load", () => { buildVine(); drawVine(); });
   setTimeout(() => { buildVine(); drawVine(); }, 700);
-  drawVine();
 
   const fine = window.matchMedia("(pointer: fine)").matches;
   const PERSPECTIVE = 1200; // must match .scene { perspective }
@@ -491,6 +543,9 @@
   let vh = window.innerHeight;
   const t0 = performance.now();
 
+  // sections that get scroll-linked depth ("coming out of the screen")
+  const depthSecs = Array.from(document.querySelectorAll("main > section"));
+
   function updateTargets() {
     const p = scrollY / vh; // pages scrolled
     // Intensified ~2x: pointer drives stronger rotation + lateral slide;
@@ -528,6 +583,20 @@
       const y = -((t / dur) % 1) * 140;             // slow rise
       const x = Math.sin(t * 0.4 + ph) * 12;        // gentle sway
       m.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z}px) scale(${ds.toFixed(3)})`;
+    }
+
+    // section depth: rise from the back when below center, push toward the
+    // viewer and fade as they scroll up past center — fluid "out of screen"
+    for (let i = 0; i < depthSecs.length; i++) {
+      const sec = depthSecs[i];
+      const r = sec.getBoundingClientRect();
+      if (r.bottom < -200 || r.top > vh + 200) continue; // skip off-screen
+      let dd = (r.top + r.height / 2 - vh / 2) / vh;
+      dd = Math.max(-1.4, Math.min(1.4, dd));
+      const tz = -dd * 150;
+      const op = dd < -0.55 ? Math.max(0.2, 1 - (-dd - 0.55) * 1.25) : 1;
+      sec.style.transform = `translateZ(${tz.toFixed(1)}px)`;
+      sec.style.opacity = op.toFixed(3);
     }
 
     requestAnimationFrame(loop); // motes drift continuously, so always loop

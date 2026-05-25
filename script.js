@@ -38,61 +38,107 @@
 
   if (prefersReduced) return; // skip motion-heavy work
 
-  /* ---------- PARTICLES (atmospheric) ---------- */
-  const pBox = document.getElementById("particles");
-  if (pBox) {
-    const count = window.innerWidth < 600 ? 14 : 30;
+  const fine = window.matchMedia("(pointer: fine)").matches;
+  const PERSPECTIVE = 1200; // must match .scene { perspective }
+
+  /* ---------- DEPTH LAYERS — derive cover-scale from translateZ ----------
+     An element at translateZ(z) under perspective P appears scaled by
+     P/(P-z); we counter it with scale = (P - z)/P so each layer keeps
+     covering the viewport regardless of its depth.                        */
+  const layers = Array.from(document.querySelectorAll("[data-layer]"));
+  layers.forEach((layer) => {
+    const z = parseFloat(layer.style.getPropertyValue("--z")) || 0;
+    layer.style.setProperty("--s", ((PERSPECTIVE - z) / PERSPECTIVE).toFixed(4));
+  });
+
+  /* ---------- VOLUMETRIC PARTICLE FIELD ----------
+     Particles live at real depths inside the camera, so they inherit the
+     same 3D parallax as the orbs and drift slowly upward.                  */
+  const field = document.getElementById("field");
+  if (field) {
+    const count = window.innerWidth < 600 ? 26 : 70;
     const frag = document.createDocumentFragment();
     for (let i = 0; i < count; i++) {
       const s = document.createElement("span");
-      const size = Math.random() * 2.5 + 1;
+      const z = -Math.random() * 900;                 // spread through depth
+      const depthScale = (PERSPECTIVE - z) / PERSPECTIVE;
+      const size = (Math.random() * 2 + 0.8);
       s.style.left = Math.random() * 100 + "%";
-      s.style.bottom = Math.random() * 40 + "%";
+      s.style.top = Math.random() * 100 + "%";
       s.style.width = s.style.height = size + "px";
-      s.style.animationDuration = (Math.random() * 18 + 16) + "s";
-      s.style.animationDelay = (Math.random() * -30) + "s";
+      s.style.opacity = (0.25 + Math.random() * 0.55).toFixed(2);
+      s.style.transform = `translateZ(${z}px) scale(${depthScale.toFixed(3)})`;
+      s.dataset.z = z;
+      s.dataset.drift = (Math.random() * 18 + 14).toFixed(1); // seconds
+      s.dataset.phase = (Math.random() * Math.PI * 2).toFixed(3);
       frag.appendChild(s);
     }
-    pBox.appendChild(frag);
+    field.appendChild(frag);
   }
+  const motes = field ? Array.from(field.children) : [];
 
-  /* ---------- PARALLAX (scroll) ---------- */
-  const layers = Array.from(document.querySelectorAll("[data-speed]"));
-  const glow = document.querySelector(".scene__glow");
+  /* ---------- 3D CAMERA ENGINE ----------
+     One transform on .scene__camera drives the whole world. Targets are
+     set by scroll + pointer; a render loop eases current → target (lerp)
+     for a fluid, weighty, immersive feel.                                  */
+  const camera = document.getElementById("camera");
+  const cur = { rx: 0, ry: 0, tx: 0, ty: 0, tz: 0 };
+  const tgt = { rx: 0, ry: 0, tx: 0, ty: 0, tz: 0 };
+  let pointerX = 0, pointerY = 0;
   let scrollY = window.scrollY;
-  let mouseX = 0, mouseY = 0;
-  let ticking = false;
+  let vh = window.innerHeight;
+  const t0 = performance.now();
 
-  function render() {
-    layers.forEach((layer) => {
-      const speed = parseFloat(layer.dataset.speed) || 0;
-      const y = -scrollY * speed;
-      const mx = mouseX * speed * 22;
-      const my = mouseY * speed * 14;
-      layer.style.transform = `translate3d(${mx}px, ${y + my}px, 0)`;
-    });
-    if (glow) {
-      glow.style.transform = `translate3d(calc(-50% + ${mouseX * 26}px), ${scrollY * 0.06 + mouseY * 18}px, 0)`;
+  function updateTargets() {
+    const p = scrollY / vh; // pages scrolled
+    // pointer drives rotation + lateral slide; scroll glides the camera
+    // forward (into the field) and downward through the atmosphere.
+    tgt.ry = pointerX * 7;          // deg
+    tgt.rx = -pointerY * 5;         // deg
+    tgt.tx = pointerX * -40;        // px
+    tgt.ty = scrollY * 0.12 - pointerY * 26;
+    tgt.tz = Math.min(p * 140, 360); // ease forward, capped
+  }
+
+  function loop(now) {
+    const k = 0.08; // easing factor
+    cur.rx += (tgt.rx - cur.rx) * k;
+    cur.ry += (tgt.ry - cur.ry) * k;
+    cur.tx += (tgt.tx - cur.tx) * k;
+    cur.ty += (tgt.ty - cur.ty) * k;
+    cur.tz += (tgt.tz - cur.tz) * k;
+
+    camera.style.transform =
+      `translate3d(${cur.tx.toFixed(2)}px, ${cur.ty.toFixed(2)}px, ${cur.tz.toFixed(2)}px) ` +
+      `rotateX(${cur.rx.toFixed(3)}deg) rotateY(${cur.ry.toFixed(3)}deg)`;
+
+    // drift the motes upward on their own phase (cheap, additive to depth)
+    const t = (now - t0) / 1000;
+    for (let i = 0; i < motes.length; i++) {
+      const m = motes[i];
+      const z = +m.dataset.z;
+      const ds = (PERSPECTIVE - z) / PERSPECTIVE;
+      const dur = +m.dataset.drift;
+      const ph = +m.dataset.phase;
+      const y = -((t / dur) % 1) * 140;             // slow rise
+      const x = Math.sin(t * 0.4 + ph) * 12;        // gentle sway
+      m.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z}px) scale(${ds.toFixed(3)})`;
     }
-    ticking = false;
-  }
-  function requestRender() {
-    if (!ticking) { ticking = true; requestAnimationFrame(render); }
+
+    requestAnimationFrame(loop); // motes drift continuously, so always loop
   }
 
-  window.addEventListener("scroll", () => { scrollY = window.scrollY; requestRender(); }, { passive: true });
-  window.addEventListener("resize", requestRender);
-
-  /* ---------- MOUSE DEPTH (desktop only) ---------- */
-  const fine = window.matchMedia("(pointer: fine)").matches;
+  window.addEventListener("scroll", () => { scrollY = window.scrollY; updateTargets(); }, { passive: true });
+  window.addEventListener("resize", () => { vh = window.innerHeight; updateTargets(); });
   if (fine) {
     window.addEventListener("mousemove", (e) => {
-      mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
-      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
-      requestRender();
+      pointerX = (e.clientX / window.innerWidth - 0.5) * 2;
+      pointerY = (e.clientY / window.innerHeight - 0.5) * 2;
+      updateTargets();
     }, { passive: true });
   }
-  render();
+  updateTargets();
+  requestAnimationFrame(loop);
 
   /* ---------- CARD TILT (3D) ---------- */
   if (fine) {

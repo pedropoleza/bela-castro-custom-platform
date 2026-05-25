@@ -23,6 +23,8 @@
 
   --mist: rgba(180, 195, 200, 0.06);
   --glow: rgba(198, 168, 110, 0.16);
+  --rose: rgba(214, 150, 142, 0.18);
+  --sage-glow: rgba(155, 176, 154, 0.16);
 
   --text: #ece7dd;
   --text-dim: #9aa3a8;
@@ -51,7 +53,9 @@
   --mtn-fore: #b9b19c;
 
   --mist: rgba(255, 255, 255, 0.28);
-  --glow: rgba(201, 168, 106, 0.22);
+  --glow: rgba(201, 168, 106, 0.4);
+  --rose: rgba(206, 130, 118, 0.32);
+  --sage-glow: rgba(120, 150, 120, 0.3);
 
   --text: #2b2a26;
   --text-dim: #6f6a5e;
@@ -84,91 +88,111 @@ ul, ol { list-style: none; }
 a { color: inherit; text-decoration: none; }
 
 /* ============================================================
-   ATMOSPHERIC SCENE (fixed behind content)
+   ATMOSPHERIC DEPTH FIELD — real 3D camera
+   ------------------------------------------------------------
+   The .scene holds a perspective. .scene__camera is the single
+   element we move/rotate; every layer sits at a real translateZ,
+   so the perspective itself produces correct parallax (near
+   layers move more than far ones) and genuine depth on tilt.
+   Layer base transform is static: translateZ(--z) scale(--s),
+   where --s = (P - z) / P keeps each layer covering the view.
    ============================================================ */
 .scene {
   position: fixed;
   inset: 0;
   z-index: -1;
   overflow: hidden;
-  perspective: 1000px;
+  perspective: 1200px;
+  perspective-origin: 50% 45%;
 }
 .scene__sky {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, var(--sky-top) 0%, var(--bg) 45%, var(--sky-bot) 100%);
+  inset: -10%;
+  background: radial-gradient(130% 100% at 50% 18%, var(--sky-top) 0%, var(--bg) 46%, var(--sky-bot) 100%);
   transition: background 0.6s var(--ease);
 }
-.scene__glow {
+
+.scene__camera {
   position: absolute;
-  left: 50%;
-  top: 8%;
-  width: 70vw;
-  height: 70vw;
-  max-width: 900px;
-  max-height: 900px;
-  transform: translateX(-50%);
-  background: radial-gradient(circle, var(--glow) 0%, transparent 62%);
-  filter: blur(10px);
+  inset: 0;
+  transform-style: preserve-3d;
   will-change: transform;
 }
 
-/* mountain ranges share base positioning */
-.range {
+/* every depth layer is full-bleed and centered; JS sets --s from --z */
+[data-layer] {
   position: absolute;
-  left: -6%;
-  width: 112%;
-  height: auto;
+  top: 50%; left: 50%;
+  width: 100%; height: 100%;
+  transform: translate(-50%, -50%) translateZ(var(--z)) scale(var(--s, 1));
+  transform-origin: center;
   will-change: transform;
 }
-.range path { transition: fill 0.6s var(--ease); }
 
-.range--far  { bottom: 30vh; filter: blur(3px); opacity: 0.85; }
-.range--far path  { fill: var(--mtn-far); }
-.range--mid  { bottom: 16vh; filter: blur(1.4px); }
-.range--mid path  { fill: var(--mtn-mid); }
-.range--near { bottom: 2vh; }
-.range--near path { fill: var(--mtn-near); }
-.range--fore { bottom: -6vh; height: 40vh; }
-.range--fore path { fill: var(--mtn-fore); }
-
-/* mist / fog */
-.mist {
-  position: absolute;
-  left: -20%;
-  width: 140%;
-  height: 38vh;
-  pointer-events: none;
-  will-change: transform;
-  background: radial-gradient(120% 60% at 50% 100%, var(--mist) 0%, transparent 70%);
+/* soft gradient orbs of light at varying depth */
+.orb {
+  border-radius: 50%;
+  filter: blur(2px);
+  mix-blend-mode: screen;
+  opacity: 0.9;
 }
-.mist--a { bottom: 20vh; opacity: 0.9; }
-.mist--b { bottom: 0; height: 30vh; opacity: 0.7; }
+[data-theme="light"] .orb { mix-blend-mode: multiply; opacity: 0.8; }
 
-.particles { position: absolute; inset: 0; pointer-events: none; }
-.particles span {
+.orb--far {
+  width: 80vmax; height: 80vmax;
+  left: 50%; top: 12%;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 60%);
+}
+.orb--rose {
+  width: 48vmax; height: 48vmax;
+  left: 22%; top: 8%;
+  background: radial-gradient(circle, var(--rose) 0%, transparent 62%);
+}
+.orb--sage {
+  width: 46vmax; height: 46vmax;
+  left: 78%; top: 38%;
+  background: radial-gradient(circle, var(--sage-glow) 0%, transparent 64%);
+}
+.orb--near {
+  width: 30vmax; height: 30vmax;
+  left: 38%; top: 62%;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 66%);
+  filter: blur(6px);
+}
+
+/* a luminous horizon band that grounds the scene */
+.halo {
+  background:
+    radial-gradient(120% 60% at 50% 100%, var(--glow) 0%, transparent 58%),
+    linear-gradient(180deg, transparent 60%, var(--mist) 100%);
+}
+
+/* volumetric particle field — spans are placed in 3D by JS */
+.field { pointer-events: none; transform-style: preserve-3d; }
+.field span {
   position: absolute;
-  width: 3px; height: 3px;
   border-radius: 50%;
   background: var(--particle);
-  opacity: 0;
-  animation: drift linear infinite;
+  box-shadow: 0 0 6px var(--particle);
+  will-change: transform, opacity;
 }
-@keyframes drift {
-  0%   { transform: translateY(20px) translateX(0); opacity: 0; }
-  15%  { opacity: 0.7; }
-  85%  { opacity: 0.5; }
-  100% { transform: translateY(-90vh) translateX(24px); opacity: 0; }
+
+.scene__grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .scene__vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(120% 90% at 50% 30%, transparent 55%, rgba(0,0,0,0.35) 100%);
+  background: radial-gradient(120% 90% at 50% 32%, transparent 52%, rgba(0,0,0,0.45) 100%);
 }
 [data-theme="light"] .scene__vignette {
-  background: radial-gradient(120% 90% at 50% 30%, transparent 60%, rgba(120,100,70,0.12) 100%);
+  background: radial-gradient(120% 90% at 50% 32%, transparent 60%, rgba(120,100,70,0.14) 100%);
 }
 
 /* ============================================================
@@ -525,8 +549,9 @@ section { position: relative; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
-  .particles, .scroll-hint { animation: none; }
+  .scroll-hint { animation: none; }
   .scroll-hint__wheel { animation: none; }
-  .range, .mist, .scene__glow { transform: none !important; }
+  .scene__camera, [data-layer] { transform: translate(-50%, -50%) !important; }
+  .scene__camera { transform: none !important; }
   * { transition-duration: 0.001ms !important; }
 }

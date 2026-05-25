@@ -11,37 +11,19 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- ====================== ATMOSPHERIC MOUNTAIN SCENE ====================== -->
+  <!-- ====================== ATMOSPHERIC DEPTH FIELD (3D camera) ====================== -->
   <div class="scene" id="scene" aria-hidden="true">
     <div class="scene__sky"></div>
-    <div class="scene__glow" data-depth="0.02"></div>
-
-    <!-- Layer 1 — far background mountains -->
-    <svg class="range range--far" data-speed="0.12" viewBox="0 0 1440 600" preserveAspectRatio="xMidYMax slice">
-      <path d="M0 600 L0 340 L120 300 L260 360 L420 250 L560 330 L720 220 L880 320 L1040 240 L1200 330 L1320 280 L1440 330 L1440 600 Z" />
-    </svg>
-
-    <!-- Layer 2 — middle mountains -->
-    <svg class="range range--mid" data-speed="0.26" viewBox="0 0 1440 600" preserveAspectRatio="xMidYMax slice">
-      <path d="M0 600 L0 430 L160 360 L320 440 L470 330 L640 430 L800 320 L980 430 L1140 350 L1300 440 L1440 380 L1440 600 Z" />
-    </svg>
-
-    <!-- mist between mid and near -->
-    <div class="mist mist--a" data-speed="0.34"></div>
-
-    <!-- Layer 3 — foreground terrain -->
-    <svg class="range range--near" data-speed="0.46" viewBox="0 0 1440 600" preserveAspectRatio="xMidYMax slice">
-      <path d="M0 600 L0 500 L200 440 L380 510 L560 430 L760 520 L960 440 L1160 520 L1340 460 L1440 500 L1440 600 Z" />
-    </svg>
-
-    <!-- closest terrain shadow -->
-    <svg class="range range--fore" data-speed="0.7" viewBox="0 0 1440 400" preserveAspectRatio="xMidYMax slice">
-      <path d="M0 400 L0 320 L240 360 L480 300 L760 370 L1040 310 L1280 360 L1440 330 L1440 400 Z" />
-    </svg>
-
-    <!-- drifting fog + particles -->
-    <div class="mist mist--b" data-speed="0.55"></div>
-    <div class="particles" id="particles"></div>
+    <div class="scene__camera" id="camera">
+      <!-- depth layers: each sits at a real translateZ; the camera moves, perspective does the parallax -->
+      <div class="orb orb--far"   data-layer style="--z:-1000px"></div>
+      <div class="orb orb--rose"  data-layer style="--z:-720px"></div>
+      <div class="orb orb--sage"  data-layer style="--z:-480px"></div>
+      <div class="halo"           data-layer style="--z:-360px"></div>
+      <div class="orb orb--near"  data-layer style="--z:-150px"></div>
+      <div class="field" id="field" data-layer style="--z:0px"></div>
+    </div>
+    <div class="scene__grain"></div>
     <div class="scene__vignette"></div>
   </div>
 

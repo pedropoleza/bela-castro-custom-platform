@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Vida Bela CRM Flow — a weekly communication rhythm designed to empower women through mindset, movement, wellness, emotional awareness and intentional living." />
-  <title>Vida Bela — A Rhythm for Transformation</title>
+  <meta name="description" content="Vida Bela Club — empoderando mulheres a construir uma vida de liberdade, confiança e plenitude através de disciplina mental, bem-estar físico e resiliência emocional." />
+  <title data-i18n="meta.title">Vida Bela — Molde o estilo de vida que você merece</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -15,7 +15,6 @@
   <div class="scene" id="scene" aria-hidden="true">
     <div class="scene__sky"></div>
     <div class="scene__camera" id="camera">
-      <!-- depth layers: each sits at a real translateZ; the camera moves, perspective does the parallax -->
       <div class="orb orb--far"   data-layer style="--z:-1000px"></div>
       <div class="orb orb--rose"  data-layer style="--z:-720px"></div>
       <div class="orb orb--sage"  data-layer style="--z:-480px"></div>
@@ -27,208 +26,428 @@
     <div class="scene__vignette"></div>
   </div>
 
-  <!-- ====================== THEME TOGGLE ====================== -->
-  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light and dark theme">
-    <svg class="icon icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
-    <svg class="icon icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.22 4.22l1.7 1.7M18.08 18.08l1.7 1.7M2 12h2.4M19.6 12H22M4.22 19.78l1.7-1.7M18.08 5.92l1.7-1.7"/></svg>
-  </button>
+  <!-- ====================== TOP BAR ====================== -->
+  <header class="topbar">
+    <a class="brand" href="#hero">Vida Bela</a>
+    <div class="topbar__controls">
+      <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">
+        <span class="lang-toggle__opt" data-lang-label="pt">PT</span>
+        <span class="lang-toggle__sep">/</span>
+        <span class="lang-toggle__opt" data-lang-label="en">EN</span>
+      </button>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light and dark theme">
+        <svg class="icon icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+        <svg class="icon icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.22 4.22l1.7 1.7M18.08 18.08l1.7 1.7M2 12h2.4M19.6 12H22M4.22 19.78l1.7-1.7M18.08 5.92l1.7-1.7"/></svg>
+      </button>
+    </div>
+  </header>
 
   <!-- ====================== CONTENT ====================== -->
   <main>
-    <!-- ---------- HERO ---------- -->
+    <!-- ---------- 1. HERO ---------- -->
     <section class="hero" id="hero">
       <div class="hero__inner reveal" data-reveal>
-        <span class="badge">Vida Bela CRM Flow</span>
-        <h1 class="hero__title">A Weekly Communication Rhythm Designed to Empower Women</h1>
-        <p class="hero__sub">A structured CRM experience that nurtures mindset, movement, wellness, emotional awareness, and intentional living — one day at a time.</p>
+        <span class="badge" data-i18n="hero.badge">Vida Bela Club</span>
+        <h1 class="hero__title" data-i18n="hero.title">Molde o estilo de vida que você merece</h1>
+        <p class="hero__sub" data-i18n="hero.sub">Empoderamos mulheres a construir uma vida de liberdade, confiança e plenitude — através de disciplina mental, bem-estar físico e resiliência emocional.</p>
         <div class="hero__actions">
-          <a class="btn btn--primary" href="#flow">Explore Weekly Flow</a>
-          <a class="btn btn--ghost" href="#strategy">View CRM Strategy</a>
+          <a class="btn btn--primary" href="#membership" data-i18n="hero.cta1">Começar a jornada</a>
+          <a class="btn btn--ghost" href="#flow" data-i18n="hero.cta2">Ver o ritmo semanal</a>
         </div>
       </div>
-      <a class="scroll-hint" href="#flow" aria-label="Scroll to weekly flow">
-        <span class="scroll-hint__text">Begin the ascent</span>
+      <a class="scroll-hint" href="#vision" aria-label="Scroll">
+        <span class="scroll-hint__text" data-i18n="hero.scroll">Comece a jornada</span>
         <span class="scroll-hint__mouse"><span class="scroll-hint__wheel"></span></span>
       </a>
     </section>
 
-    <!-- ---------- WEEKLY FLOW ---------- -->
+    <!-- ---------- 2. VISION + PILLARS ---------- -->
+    <section class="vision" id="vision">
+      <header class="section-head reveal" data-reveal>
+        <span class="eyebrow" data-i18n="vision.eyebrow">Nossa visão</span>
+        <h2 data-i18n="vision.title">Uma jornada de volta a si mesma</h2>
+        <p data-i18n="vision.lead">A Vida Bela nasceu para ajudar mulheres a se reconectarem consigo mesmas e a se tornarem a versão mais forte de quem sempre foram. Toda mulher merece se sentir inteira, com propósito e livre.</p>
+      </header>
+      <div class="cards cards--3">
+        <article class="card reveal" data-reveal data-tilt>
+          <span class="card__n">I</span>
+          <h3 data-i18n="vision.p1.t">Clareza Mental</h3>
+          <p data-i18n="vision.p1.d">Desenvolva a disciplina e o foco para pensar com clareza e agir com intenção todos os dias.</p>
+        </article>
+        <article class="card reveal" data-reveal data-tilt>
+          <span class="card__n">II</span>
+          <h3 data-i18n="vision.p2.t">Bem-estar Físico</h3>
+          <p data-i18n="vision.p2.d">Fortaleça o corpo e construa hábitos que sustentam energia para a vida toda.</p>
+        </article>
+        <article class="card reveal" data-reveal data-tilt>
+          <span class="card__n">III</span>
+          <h3 data-i18n="vision.p3.t">Resiliência Emocional</h3>
+          <p data-i18n="vision.p3.d">Cure por dentro, construa confiança e cultive autoestima e propósito profundos.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ---------- 3. THE PROBLEM ---------- -->
+    <section class="problem" id="problem">
+      <header class="section-head reveal" data-reveal>
+        <span class="eyebrow" data-i18n="problem.eyebrow">A realidade</span>
+        <h2 data-i18n="problem.title">As mulheres de hoje estão sobrecarregadas</h2>
+        <p data-i18n="problem.lead">Milhões de mulheres carregam silenciosamente peso demais. Por trás das agendas lotadas, das responsabilidades e dos sorrisos — muitas vivem no limite, buscando um caminho de volta a si mesmas.</p>
+      </header>
+      <div class="cards cards--4">
+        <article class="card card--quiet reveal" data-reveal data-tilt>
+          <h3 data-i18n="problem.c1.t">Burnout Emocional</h3>
+          <p data-i18n="problem.c1.d">Ansiedade crônica, estresse e sobrecarga que deixam pouco espaço para alegria ou descanso.</p>
+        </article>
+        <article class="card card--quiet reveal" data-reveal data-tilt>
+          <h3 data-i18n="problem.c2.t">Perda de Identidade</h3>
+          <p data-i18n="problem.c2.d">Sentir-se desconectada de quem é, sem direção, confiança ou propósito.</p>
+        </article>
+        <article class="card card--quiet reveal" data-reveal data-tilt>
+          <h3 data-i18n="problem.c3.t">Padrões Nocivos</h3>
+          <p data-i18n="problem.c3.d">Rotinas inconsistentes, dependência emocional e ciclos difíceis de quebrar sozinha.</p>
+        </article>
+        <article class="card card--quiet reveal" data-reveal data-tilt>
+          <h3 data-i18n="problem.c4.t">Equilíbrio Impossível</h3>
+          <p data-i18n="problem.c4.d">A luta de harmonizar carreira, família, saúde e crescimento pessoal ao mesmo tempo.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ---------- 4. ECOSYSTEM ---------- -->
+    <section class="ecosystem" id="ecosystem">
+      <header class="section-head reveal" data-reveal>
+        <span class="eyebrow" data-i18n="eco.eyebrow">Mais que bem-estar</span>
+        <h2 data-i18n="eco.title">Um ecossistema completo para a transformação</h2>
+        <p data-i18n="eco.lead">A Vida Bela não é mais um programa de fitness ou mentalidade. É um ecossistema integrado que cuida de cada dimensão da vida de uma mulher — mente, corpo e alma — em harmonia, para criar mudança duradoura.</p>
+      </header>
+      <div class="cards cards--3">
+        <article class="card card--list reveal" data-reveal data-tilt>
+          <h3 data-i18n="eco.c1.t">Disciplina Mental</h3>
+          <ul>
+            <li data-i18n="eco.c1.i1">Coaching personalizado</li>
+            <li data-i18n="eco.c1.i2">Desenvolvimento de mentalidade</li>
+            <li data-i18n="eco.c1.i3">Sistemas de responsabilidade</li>
+          </ul>
+        </article>
+        <article class="card card--list reveal" data-reveal data-tilt>
+          <h3 data-i18n="eco.c2.t">Bem-estar Físico</h3>
+          <ul>
+            <li data-i18n="eco.c2.i1">Biblioteca de treinos guiados</li>
+            <li data-i18n="eco.c2.i2">Recomendações de wellness</li>
+            <li data-i18n="eco.c2.i3">Construção de rotina saudável</li>
+          </ul>
+        </article>
+        <article class="card card--list reveal" data-reveal data-tilt>
+          <h3 data-i18n="eco.c3.t">Resiliência Emocional</h3>
+          <ul>
+            <li data-i18n="eco.c3.i1">Práticas de meditação</li>
+            <li data-i18n="eco.c3.i2">Sessões de respiração</li>
+            <li data-i18n="eco.c3.i3">Ferramentas de cura & comunidade</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- ---------- 5. WHAT MEMBERS RECEIVE ---------- -->
+    <section class="membership" id="membership">
+      <header class="section-head reveal" data-reveal>
+        <span class="eyebrow" data-i18n="mem.eyebrow">A associação</span>
+        <h2 data-i18n="mem.title">O que as membros recebem</h2>
+        <p data-i18n="mem.lead">Cada elemento da associação Vida Bela foi pensado para apoiar sua transformação completa — para que você sempre saiba o próximo passo e nunca se sinta sozinha na jornada.</p>
+      </header>
+      <div class="cards cards--3">
+        <article class="card reveal" data-reveal data-tilt>
+          <span class="card__n">01</span>
+          <h3 data-i18n="mem.c1.t">Biblioteca de Treinos</h3>
+          <p data-i18n="mem.c1.d">Treinos guiados sob demanda para todo nível e agenda.</p>
+        </article>
+        <article class="card reveal" data-reveal data-tilt>
+          <span class="card__n">02</span>
+          <h3 data-i18n="mem.c2.t">Meditação & Respiração</h3>
+          <p data-i18n="mem.c2.d">Sessões calmantes para reduzir o estresse e construir quietude interior.</p>
+        </article>
+        <article class="card reveal" data-reveal data-tilt>
+          <span class="card__n">03</span>
+          <h3 data-i18n="mem.c3.t">Coaching Semanal</h3>
+          <p data-i18n="mem.c3.d">Sessões de coaching em grupo ao vivo para guiar, desafiar e inspirar seu crescimento.</p>
+        </article>
+        <article class="card reveal" data-reveal data-tilt>
+          <span class="card__n">04</span>
+          <h3 data-i18n="mem.c4.t">Guias de Transformação</h3>
+          <p data-i18n="mem.c4.d">Guias temáticos mensais com hábitos, ferramentas e passos de ação.</p>
+        </article>
+        <article class="card reveal" data-reveal data-tilt>
+          <span class="card__n">05</span>
+          <h3 data-i18n="mem.c5.t">Responsabilidade & Comunidade</h3>
+          <p data-i18n="mem.c5.d">Uma irmandade que te sustenta nos seus padrões mais altos.</p>
+        </article>
+        <article class="card reveal" data-reveal data-tilt>
+          <span class="card__n">06</span>
+          <h3 data-i18n="mem.c6.t">Desafios & Acompanhamento</h3>
+          <p data-i18n="mem.c6.d">Ferramentas de hábitos e desafios de wellness para manter o ritmo vivo.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ---------- 6. THE 4 PHASES ---------- -->
+    <section class="phases" id="phases">
+      <header class="section-head reveal" data-reveal>
+        <span class="eyebrow" data-i18n="phase.eyebrow">O método</span>
+        <h2 data-i18n="phase.title">As 4 fases da transformação</h2>
+        <p data-i18n="phase.lead">Nosso método comprovado conduz as mulheres por uma progressão cuidadosa — da consciência até a liberdade duradoura. Cada fase se constrói sobre a anterior.</p>
+      </header>
+      <ol class="phase-track">
+        <li class="phase reveal" data-reveal data-tilt style="--depth:1">
+          <span class="phase__n">01</span>
+          <div class="phase__body">
+            <h3 data-i18n="phase.p1.t">Consciência</h3>
+            <p data-i18n="phase.p1.d">Desperte para as crenças, padrões e histórias limitantes que te seguraram. A clareza começa aqui.</p>
+          </div>
+        </li>
+        <li class="phase reveal" data-reveal data-tilt style="--depth:2">
+          <span class="phase__n">02</span>
+          <div class="phase__body">
+            <h3 data-i18n="phase.p2.t">Fundação</h3>
+            <p data-i18n="phase.p2.d">Construa as rotinas saudáveis, hábitos diários e disciplina mental que se tornam a base da sua nova vida.</p>
+          </div>
+        </li>
+        <li class="phase reveal" data-reveal data-tilt style="--depth:3">
+          <span class="phase__n">03</span>
+          <div class="phase__body">
+            <h3 data-i18n="phase.p3.t">Expansão</h3>
+            <p data-i18n="phase.p3.d">Eleve sua confiança, aumente seus padrões e assuma plenamente uma identidade mais empoderada.</p>
+          </div>
+        </li>
+        <li class="phase reveal" data-reveal data-tilt style="--depth:4">
+          <span class="phase__n">04</span>
+          <div class="phase__body">
+            <h3 data-i18n="phase.p4.t">Liberdade</h3>
+            <p data-i18n="phase.p4.d">Crie felicidade sustentável, plenitude profunda e uma vida verdadeiramente alinhada a quem você é.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ---------- 7. WEEKLY RHYTHM ---------- -->
     <section class="flow" id="flow">
       <header class="section-head reveal" data-reveal>
-        <span class="eyebrow">The Journey</span>
-        <h2>Seven Days. One Elevation.</h2>
-        <p>Each day is a waypoint on the trail — a deliberate stop that builds rhythm, expectation, and emotional momentum as members climb through the week.</p>
+        <span class="eyebrow" data-i18n="flow.eyebrow">O ritmo</span>
+        <h2 data-i18n="flow.title">Sete dias. Uma elevação.</h2>
+        <p data-i18n="flow.lead">Cada dia é um ponto na trilha — uma parada deliberada que cria ritmo, expectativa e impulso emocional enquanto as membros sobem ao longo da semana.</p>
       </header>
 
       <ol class="trail">
         <li class="day reveal" data-reveal data-tilt>
           <span class="day__index">01</span>
           <div class="day__card">
-            <span class="day__name">Monday</span>
-            <span class="day__theme">Motivation &amp; Mindset</span>
-            <p class="day__lead">Start the week aligned and strengthened.</p>
-            <p class="day__obj"><strong>Objective.</strong> Help women begin the week with clarity, intention, discipline, and emotional strength.</p>
+            <span class="day__name" data-i18n="day.mon.name">Segunda-feira</span>
+            <span class="day__theme" data-i18n="day.mon.theme">Motivação & Mentalidade</span>
+            <p class="day__lead" data-i18n="day.mon.lead">Comece a semana alinhada e fortalecida.</p>
+            <p class="day__obj"><strong data-i18n="day.obj">Objetivo.</strong> <span data-i18n="day.mon.obj">Ajudar as mulheres a iniciarem a semana com clareza, intenção, disciplina e força emocional.</span></p>
             <ul class="day__ideas">
-              <li>Mindset shifts</li>
-              <li>Self-confidence reminders</li>
-              <li>Self-esteem and identity</li>
-              <li>Discipline over motivation</li>
-              <li>Encouragement to take action</li>
-              <li>Weekly intention setting</li>
+              <li data-i18n="day.mon.i1">Mudanças de mentalidade</li>
+              <li data-i18n="day.mon.i2">Lembretes de autoconfiança</li>
+              <li data-i18n="day.mon.i3">Autoestima e identidade</li>
+              <li data-i18n="day.mon.i4">Disciplina acima da motivação</li>
+              <li data-i18n="day.mon.i5">Incentivo à ação</li>
+              <li data-i18n="day.mon.i6">Definição de intenção da semana</li>
             </ul>
-            <p class="day__goal">Create emotional momentum and positive energy for the week.</p>
+            <p class="day__goal" data-i18n="day.mon.goal">Criar impulso emocional e energia positiva para a semana.</p>
           </div>
         </li>
 
         <li class="day day--right reveal" data-reveal data-tilt>
           <span class="day__index">02</span>
           <div class="day__card">
-            <span class="day__name">Tuesday</span>
-            <span class="day__theme">Train Yourself</span>
-            <p class="day__lead">Physical wellbeing &amp; self-discipline.</p>
-            <p class="day__obj"><strong>Objective.</strong> Encourage movement, body awareness, consistency, and physical strengthening.</p>
+            <span class="day__name" data-i18n="day.tue.name">Terça-feira</span>
+            <span class="day__theme" data-i18n="day.tue.theme">Treine-se</span>
+            <p class="day__lead" data-i18n="day.tue.lead">Bem-estar físico & autodisciplina.</p>
+            <p class="day__obj"><strong data-i18n="day.obj">Objetivo.</strong> <span data-i18n="day.tue.obj">Incentivar movimento, consciência corporal, consistência e fortalecimento físico.</span></p>
             <ul class="day__ideas">
-              <li>Workout reminders</li>
-              <li>Fitness motivation</li>
-              <li>Movement challenges</li>
-              <li>Stretching and mobility</li>
-              <li>Importance of consistency</li>
-              <li>“Train your body, train your mind”</li>
+              <li data-i18n="day.tue.i1">Lembretes de treino</li>
+              <li data-i18n="day.tue.i2">Motivação fitness</li>
+              <li data-i18n="day.tue.i3">Desafios de movimento</li>
+              <li data-i18n="day.tue.i4">Alongamento e mobilidade</li>
+              <li data-i18n="day.tue.i5">Importância da consistência</li>
+              <li data-i18n="day.tue.i6">“Treine seu corpo, treine sua mente”</li>
             </ul>
-            <p class="day__goal">Reinforce healthy habits and the connection between physical and mental strength.</p>
+            <p class="day__goal" data-i18n="day.tue.goal">Reforçar hábitos saudáveis e a conexão entre força física e mental.</p>
           </div>
         </li>
 
         <li class="day reveal" data-reveal data-tilt>
           <span class="day__index">03</span>
           <div class="day__card">
-            <span class="day__name">Wednesday</span>
-            <span class="day__theme">Wellness Tip</span>
-            <p class="day__lead">Nutrition, habits &amp; lifestyle.</p>
-            <p class="day__obj"><strong>Objective.</strong> Educate women on how to create a healthier and more sustainable lifestyle.</p>
+            <span class="day__name" data-i18n="day.wed.name">Quarta-feira</span>
+            <span class="day__theme" data-i18n="day.wed.theme">Dica de Wellness</span>
+            <p class="day__lead" data-i18n="day.wed.lead">Nutrição, hábitos & estilo de vida.</p>
+            <p class="day__obj"><strong data-i18n="day.obj">Objetivo.</strong> <span data-i18n="day.wed.obj">Educar as mulheres sobre como criar um estilo de vida mais saudável e sustentável.</span></p>
             <ul class="day__ideas">
-              <li>Nutrition tips</li>
-              <li>Healthy habits</li>
-              <li>Nervous system regulation</li>
-              <li>Sleep quality</li>
-              <li>Hormonal health</li>
-              <li>Energy management</li>
-              <li>Hydration</li>
-              <li>Lifestyle improvements</li>
+              <li data-i18n="day.wed.i1">Dicas de nutrição</li>
+              <li data-i18n="day.wed.i2">Hábitos saudáveis</li>
+              <li data-i18n="day.wed.i3">Regulação do sistema nervoso</li>
+              <li data-i18n="day.wed.i4">Qualidade do sono</li>
+              <li data-i18n="day.wed.i5">Saúde hormonal</li>
+              <li data-i18n="day.wed.i6">Gestão de energia</li>
+              <li data-i18n="day.wed.i7">Hidratação</li>
+              <li data-i18n="day.wed.i8">Melhorias no estilo de vida</li>
             </ul>
-            <p class="day__goal">Help women implement small consistent changes.</p>
+            <p class="day__goal" data-i18n="day.wed.goal">Ajudar mulheres a implementarem pequenas mudanças consistentes.</p>
           </div>
         </li>
 
         <li class="day day--right reveal" data-reveal data-tilt>
           <span class="day__index">04</span>
           <div class="day__card">
-            <span class="day__name">Thursday</span>
-            <span class="day__theme">Gratitude &amp; Emotional Awareness</span>
-            <p class="day__lead">Inner peace &amp; emotional balance.</p>
-            <p class="day__obj"><strong>Objective.</strong> Create emotional grounding and strengthen mindfulness practices.</p>
+            <span class="day__name" data-i18n="day.thu.name">Quinta-feira</span>
+            <span class="day__theme" data-i18n="day.thu.theme">Gratidão & Consciência Emocional</span>
+            <p class="day__lead" data-i18n="day.thu.lead">Paz interior & equilíbrio emocional.</p>
+            <p class="day__obj"><strong data-i18n="day.obj">Objetivo.</strong> <span data-i18n="day.thu.obj">Criar aterramento emocional e fortalecer práticas de mindfulness.</span></p>
             <ul class="day__ideas">
-              <li>Gratitude exercises</li>
-              <li>Reflection questions</li>
-              <li>Journaling</li>
-              <li>Emotional awareness</li>
-              <li>Presence and mindfulness</li>
-              <li>Positive affirmations</li>
+              <li data-i18n="day.thu.i1">Exercícios de gratidão</li>
+              <li data-i18n="day.thu.i2">Perguntas de reflexão</li>
+              <li data-i18n="day.thu.i3">Journaling</li>
+              <li data-i18n="day.thu.i4">Consciência emocional</li>
+              <li data-i18n="day.thu.i5">Presença e mindfulness</li>
+              <li data-i18n="day.thu.i6">Afirmações positivas</li>
             </ul>
-            <p class="day__goal">Help women emotionally reconnect with themselves.</p>
+            <p class="day__goal" data-i18n="day.thu.goal">Ajudar mulheres a se reconectarem emocionalmente consigo mesmas.</p>
           </div>
         </li>
 
         <li class="day reveal" data-reveal data-tilt>
           <span class="day__index">05</span>
           <div class="day__card">
-            <span class="day__name">Friday</span>
-            <span class="day__theme">Wellness Curiosity</span>
-            <p class="day__lead">Light, educational &amp; fun content.</p>
-            <p class="day__obj"><strong>Objective.</strong> Keep the community engaged in a light and inspiring way.</p>
+            <span class="day__name" data-i18n="day.fri.name">Sexta-feira</span>
+            <span class="day__theme" data-i18n="day.fri.theme">Curiosidade Wellness</span>
+            <p class="day__lead" data-i18n="day.fri.lead">Conteúdo leve, educativo e divertido.</p>
+            <p class="day__obj"><strong data-i18n="day.obj">Objetivo.</strong> <span data-i18n="day.fri.obj">Manter a comunidade engajada de forma leve e inspiradora.</span></p>
             <ul class="day__ideas">
-              <li>Health curiosities</li>
-              <li>Brain and body facts</li>
-              <li>Mental health</li>
-              <li>Hormones and energy</li>
-              <li>Longevity</li>
-              <li>Self-care ideas</li>
-              <li>“Did you know?” style content</li>
+              <li data-i18n="day.fri.i1">Curiosidades sobre saúde</li>
+              <li data-i18n="day.fri.i2">Fatos sobre cérebro e corpo</li>
+              <li data-i18n="day.fri.i3">Saúde mental</li>
+              <li data-i18n="day.fri.i4">Hormônios e energia</li>
+              <li data-i18n="day.fri.i5">Longevidade</li>
+              <li data-i18n="day.fri.i6">Ideias de autocuidado</li>
+              <li data-i18n="day.fri.i7">Conteúdo estilo “Você sabia?”</li>
             </ul>
-            <p class="day__goal">Educate while creating a positive and fun experience.</p>
+            <p class="day__goal" data-i18n="day.fri.goal">Educar enquanto cria uma experiência positiva e divertida.</p>
           </div>
         </li>
 
         <li class="day day--right day--quiet reveal" data-reveal data-tilt>
           <span class="day__index">06</span>
           <div class="day__card">
-            <span class="day__name">Saturday</span>
-            <span class="day__theme">Offline Presence Day</span>
-            <p class="day__lead">Rest, presence &amp; real connection.</p>
-            <p class="day__obj"><strong>Objective.</strong> Allow participants to disconnect from notifications and live in the present.</p>
-            <p class="day__nomsg">No messages sent — a pause in the journey.</p>
+            <span class="day__name" data-i18n="day.sat.name">Sábado</span>
+            <span class="day__theme" data-i18n="day.sat.theme">Dia de Presença Offline</span>
+            <p class="day__lead" data-i18n="day.sat.lead">Descanso, presença & conexão real.</p>
+            <p class="day__obj"><strong data-i18n="day.obj">Objetivo.</strong> <span data-i18n="day.sat.obj">Permitir que as participantes se desconectem das notificações e vivam o presente.</span></p>
+            <p class="day__nomsg" data-i18n="day.sat.nomsg">Nenhuma mensagem enviada — uma pausa na jornada.</p>
             <ul class="day__ideas">
-              <li>Family</li>
-              <li>Nature</li>
-              <li>Movement</li>
-              <li>Joy</li>
-              <li>Presence</li>
-              <li>Real experiences</li>
+              <li data-i18n="day.sat.i1">Família</li>
+              <li data-i18n="day.sat.i2">Natureza</li>
+              <li data-i18n="day.sat.i3">Movimento</li>
+              <li data-i18n="day.sat.i4">Alegria</li>
+              <li data-i18n="day.sat.i5">Presença</li>
+              <li data-i18n="day.sat.i6">Experiências reais</li>
             </ul>
-            <p class="day__goal">Promote balance and healthy boundaries with digital communication.</p>
+            <p class="day__goal" data-i18n="day.sat.goal">Promover equilíbrio e limites saudáveis com o digital.</p>
           </div>
         </li>
 
         <li class="day reveal" data-reveal data-tilt>
           <span class="day__index">07</span>
           <div class="day__card">
-            <span class="day__name">Sunday</span>
-            <span class="day__theme">Reset &amp; Preparation</span>
-            <p class="day__lead">Reflection, planning &amp; alignment.</p>
-            <p class="day__obj"><strong>Objective.</strong> Help women prepare emotionally and mentally for the new week.</p>
+            <span class="day__name" data-i18n="day.sun.name">Domingo</span>
+            <span class="day__theme" data-i18n="day.sun.theme">Reset & Preparação</span>
+            <p class="day__lead" data-i18n="day.sun.lead">Reflexão, planejamento & alinhamento.</p>
+            <p class="day__obj"><strong data-i18n="day.obj">Objetivo.</strong> <span data-i18n="day.sun.obj">Ajudar as mulheres a se prepararem emocional e mentalmente para a nova semana.</span></p>
             <ul class="day__ideas">
-              <li>Weekly reset checklist</li>
-              <li>Meal prep</li>
-              <li>Journaling</li>
-              <li>Weekly planning</li>
-              <li>Habit tracking</li>
-              <li>Intention setting</li>
-              <li>Reflection exercises</li>
-              <li>Sunday meditation</li>
+              <li data-i18n="day.sun.i1">Checklist de reset semanal</li>
+              <li data-i18n="day.sun.i2">Meal prep</li>
+              <li data-i18n="day.sun.i3">Journaling</li>
+              <li data-i18n="day.sun.i4">Planejamento semanal</li>
+              <li data-i18n="day.sun.i5">Rastreamento de hábitos</li>
+              <li data-i18n="day.sun.i6">Definição de intenções</li>
+              <li data-i18n="day.sun.i7">Exercícios de reflexão</li>
+              <li data-i18n="day.sun.i8">Meditação de domingo</li>
             </ul>
-            <p class="day__goal">Create structure, clarity, and intentionality for the new week.</p>
+            <p class="day__goal" data-i18n="day.sun.goal">Criar estrutura, clareza e intencionalidade para a nova semana.</p>
           </div>
         </li>
       </ol>
     </section>
 
-    <!-- ---------- STRATEGY ---------- -->
-    <section class="strategy" id="strategy">
-      <div class="section-head reveal" data-reveal>
-        <span class="eyebrow">The Methodology</span>
-        <h2>Simple. Sustainable. Transformational.</h2>
-        <p>Each day has a clear emotional and behavioral purpose. Instead of overwhelming members with random messages, the CRM creates rhythm, expectation, and consistency — helping women build identity, habits, and emotional resilience over time.</p>
-      </div>
-      <div class="pillars">
-        <article class="pillar reveal" data-reveal data-tilt><span class="pillar__n">I</span><h3>Mindset</h3><p>Clarity and intention as the foundation of every week.</p></article>
-        <article class="pillar reveal" data-reveal data-tilt><span class="pillar__n">II</span><h3>Movement</h3><p>Body awareness and discipline that strengthen the mind.</p></article>
-        <article class="pillar reveal" data-reveal data-tilt><span class="pillar__n">III</span><h3>Wellness</h3><p>Sustainable habits built one small change at a time.</p></article>
-        <article class="pillar reveal" data-reveal data-tilt><span class="pillar__n">IV</span><h3>Emotional Awareness</h3><p>Grounding, gratitude, and reconnection with the self.</p></article>
-        <article class="pillar reveal" data-reveal data-tilt><span class="pillar__n">V</span><h3>Reset</h3><p>Reflection and preparation that close one cycle and open the next.</p></article>
+    <!-- ---------- 8. HOW YOU'LL FEEL ---------- -->
+    <section class="feel" id="feel">
+      <header class="section-head reveal" data-reveal>
+        <span class="eyebrow" data-i18n="feel.eyebrow">O objetivo é liberdade</span>
+        <h2 data-i18n="feel.title">Como você vai se sentir depois</h2>
+        <p data-i18n="feel.lead">É isso que estamos construindo — não só uma rotina melhor, mas uma experiência de vida completamente transformada.</p>
+      </header>
+      <div class="cards cards--4">
+        <article class="card reveal" data-reveal data-tilt>
+          <h3 data-i18n="feel.c1.t">Mais Confiante</h3>
+          <p data-i18n="feel.c1.d">Você entra em qualquer ambiente sabendo exatamente quem é.</p>
+        </article>
+        <article class="card reveal" data-reveal data-tilt>
+          <h3 data-i18n="feel.c2.t">Mais Energizada</h3>
+          <p data-i18n="feel.c2.d">Movida por hábitos saudáveis e um corpo que se sente forte e vivo.</p>
+        </article>
+        <article class="card reveal" data-reveal data-tilt>
+          <h3 data-i18n="feel.c3.t">Mais Realizada</h3>
+          <p data-i18n="feel.c3.d">Vivendo com significado, direção e esperança genuína no futuro.</p>
+        </article>
+        <article class="card reveal" data-reveal data-tilt>
+          <h3 data-i18n="feel.c4.t">Mais Estável</h3>
+          <p data-i18n="feel.c4.d">Aterrada, regulada e não mais dominada pela ansiedade ou pelo medo.</p>
+        </article>
       </div>
     </section>
 
-    <!-- ---------- FINAL CTA / SUMMIT ---------- -->
+    <!-- ---------- 9. MOVEMENT / GENERATIONS ---------- -->
+    <section class="ripple" id="movement">
+      <header class="section-head reveal" data-reveal>
+        <span class="eyebrow" data-i18n="rip.eyebrow">Um movimento</span>
+        <h2 data-i18n="rip.title">Mulheres empoderadas mudam gerações</h2>
+        <p data-i18n="rip.lead">Quando uma mulher cura, uma geração inteira muda. Os efeitos da transformação de uma mulher vão muito além dela — fluem para cada relação, família e comunidade que ela toca.</p>
+      </header>
+      <ol class="ripple-track">
+        <li class="ripple-step reveal" data-reveal data-tilt>
+          <span class="ripple-step__n">1</span>
+          <h3 data-i18n="rip.s1.t">Ela cura</h3>
+          <p data-i18n="rip.s1.d">Uma mulher se transforma de dentro para fora.</p>
+        </li>
+        <li class="ripple-step reveal" data-reveal data-tilt>
+          <span class="ripple-step__n">2</span>
+          <h3 data-i18n="rip.s2.t">A família floresce</h3>
+          <p data-i18n="rip.s2.d">Lares mais saudáveis e relações mais fortes emergem.</p>
+        </li>
+        <li class="ripple-step reveal" data-reveal data-tilt>
+          <span class="ripple-step__n">3</span>
+          <h3 data-i18n="rip.s3.t">Os filhos prosperam</h3>
+          <p data-i18n="rip.s3.d">Crianças crescem em ambientes emocionalmente seguros e acolhedores.</p>
+        </li>
+        <li class="ripple-step reveal" data-reveal data-tilt>
+          <span class="ripple-step__n">4</span>
+          <h3 data-i18n="rip.s4.t">As comunidades se erguem</h3>
+          <p data-i18n="rip.s4.d">Líderes emergem, círculos se fortalecem, gerações mudam.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ---------- 10. FINAL CTA / SUMMIT ---------- -->
     <section class="summit" id="summit">
       <div class="summit__inner reveal" data-reveal>
-        <span class="eyebrow eyebrow--light">The Summit</span>
-        <h2>More than messages. A rhythm for transformation.</h2>
-        <p>Vida Bela’s weekly CRM flow turns communication into a guided experience — supporting women with clarity, consistency, and care throughout the week.</p>
-        <a class="btn btn--primary btn--lg" href="#hero">Build This CRM Flow</a>
+        <span class="eyebrow eyebrow--light" data-i18n="cta.eyebrow">Junte-se a nós</span>
+        <h2 data-i18n="cta.title">Molde o estilo de vida que você merece</h2>
+        <p data-i18n="cta.lead">Mais que um programa. Mais que uma plataforma. A Vida Bela é um movimento de mulheres que escolhem a si mesmas, sua cura e sua liberdade todos os dias.</p>
+        <a class="btn btn--primary btn--lg" href="#hero" data-i18n="cta.btn">Fazer parte da Vida Bela</a>
       </div>
       <footer class="foot">
         <span>Vida Bela</span>
-        <span>A rhythm for transformation</span>
+        <span data-i18n="foot.tag">Um estilo de vida, não um programa</span>
       </footer>
     </section>
   </main>

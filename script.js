@@ -20,6 +20,240 @@
     localStorage.setItem("vb-theme", next);
   });
 
+  /* ---------- LANGUAGE (PT default, EN overlay) ----------
+     HTML ships with PT text; the dictionary holds EN. applyLang swaps
+     textContent for every [data-i18n]; PT just restores from the dict.  */
+  const I18N = {
+    "meta.title": { en: "Vida Bela — Shape the Lifestyle You Deserve" },
+    "hero.badge": { en: "Vida Bela Club" },
+    "hero.title": { en: "Shape the Lifestyle You Deserve" },
+    "hero.sub": { en: "Empowering women to build a life of freedom, confidence, and fulfillment — through mental discipline, physical wellbeing, and emotional resilience." },
+    "hero.cta1": { en: "Begin the journey" },
+    "hero.cta2": { en: "See the weekly rhythm" },
+    "hero.scroll": { en: "Begin the journey" },
+
+    "vision.eyebrow": { en: "Our Vision" },
+    "vision.title": { en: "A Journey Back to Yourself" },
+    "vision.lead": { en: "Vida Bela was created to help women reconnect with themselves and step into the strongest version of who they were always meant to become. Every woman deserves to feel whole, purposeful, and free." },
+    "vision.p1.t": { en: "Mental Clarity" },
+    "vision.p1.d": { en: "Develop the discipline and focus to think clearly and act with intention every day." },
+    "vision.p2.t": { en: "Physical Wellbeing" },
+    "vision.p2.d": { en: "Strengthen your body and build energy-sustaining habits that support your whole life." },
+    "vision.p3.t": { en: "Emotional Resilience" },
+    "vision.p3.d": { en: "Heal from within, build confidence, and cultivate deep self-worth and purpose." },
+
+    "problem.eyebrow": { en: "The Reality" },
+    "problem.title": { en: "Today's Women Are Overwhelmed" },
+    "problem.lead": { en: "Millions of women are silently carrying too much. Behind the busy schedules, the responsibilities, and the smiles — many are running on empty, searching for a way back to themselves." },
+    "problem.c1.t": { en: "Emotional Burnout" },
+    "problem.c1.d": { en: "Chronic anxiety, stress, and overwhelm that leave little room for joy or rest." },
+    "problem.c2.t": { en: "Loss of Identity" },
+    "problem.c2.d": { en: "Feeling disconnected from who you are, lacking direction, confidence, or purpose." },
+    "problem.c3.t": { en: "Unhealthy Patterns" },
+    "problem.c3.d": { en: "Inconsistent routines, emotional dependency, and cycles that are hard to break alone." },
+    "problem.c4.t": { en: "Impossible Balancing Act" },
+    "problem.c4.d": { en: "Struggling to harmonize career, family, health, and personal growth all at once." },
+
+    "eco.eyebrow": { en: "More Than Wellness" },
+    "eco.title": { en: "A Complete Ecosystem for Transformation" },
+    "eco.lead": { en: "Vida Bela is not just another fitness or mindset program. It is a fully integrated ecosystem that addresses every dimension of a woman's life — mind, body, and soul — working in harmony to create lasting change." },
+    "eco.c1.t": { en: "Mental Discipline" },
+    "eco.c1.i1": { en: "Personalized coaching" },
+    "eco.c1.i2": { en: "Mindset development" },
+    "eco.c1.i3": { en: "Accountability systems" },
+    "eco.c2.t": { en: "Physical Wellbeing" },
+    "eco.c2.i1": { en: "Guided workout library" },
+    "eco.c2.i2": { en: "Wellness recommendations" },
+    "eco.c2.i3": { en: "Healthy routine building" },
+    "eco.c3.t": { en: "Emotional Resilience" },
+    "eco.c3.i1": { en: "Meditation practices" },
+    "eco.c3.i2": { en: "Breathwork sessions" },
+    "eco.c3.i3": { en: "Healing tools & community" },
+
+    "mem.eyebrow": { en: "The Membership" },
+    "mem.title": { en: "What Members Receive" },
+    "mem.lead": { en: "Every element of the Vida Bela membership has been thoughtfully designed to support your full transformation — so you always know your next step and never feel alone on the journey." },
+    "mem.c1.t": { en: "Workout Library" },
+    "mem.c1.d": { en: "On-demand guided workouts for every fitness level and schedule." },
+    "mem.c2.t": { en: "Meditation & Breathwork" },
+    "mem.c2.d": { en: "Calming sessions designed to reduce stress and build inner stillness." },
+    "mem.c3.t": { en: "Weekly Coaching" },
+    "mem.c3.d": { en: "Live group coaching sessions to guide, challenge, and inspire your growth." },
+    "mem.c4.t": { en: "Transformation Guides" },
+    "mem.c4.d": { en: "Monthly themed guides with habits, tools, and action steps." },
+    "mem.c5.t": { en: "Accountability & Community" },
+    "mem.c5.d": { en: "A supportive sisterhood to hold you to your highest standards." },
+    "mem.c6.t": { en: "Challenges & Tracking" },
+    "mem.c6.d": { en: "Habit tracking tools and wellness challenges to keep momentum alive." },
+
+    "phase.eyebrow": { en: "The Framework" },
+    "phase.title": { en: "The 4 Phases of Transformation" },
+    "phase.lead": { en: "Our proven framework takes women through a carefully designed progression — from awareness all the way to lasting freedom. Each phase builds on the last." },
+    "phase.p1.t": { en: "Awareness" },
+    "phase.p1.d": { en: "Wake up to the limiting beliefs, patterns, and stories that have been holding you back. Clarity begins here." },
+    "phase.p2.t": { en: "Foundation" },
+    "phase.p2.d": { en: "Build the healthy routines, daily habits, and mental discipline that become the bedrock of your new life." },
+    "phase.p3.t": { en: "Expansion" },
+    "phase.p3.d": { en: "Elevate your confidence, raise your standards, and step fully into a more empowered identity." },
+    "phase.p4.t": { en: "Freedom" },
+    "phase.p4.d": { en: "Create sustainable happiness, deep fulfillment, and a life that feels truly aligned with who you are." },
+
+    "flow.eyebrow": { en: "The Rhythm" },
+    "flow.title": { en: "Seven Days. One Elevation." },
+    "flow.lead": { en: "Each day is a waypoint on the trail — a deliberate stop that builds rhythm, expectation, and emotional momentum as members climb through the week." },
+    "day.obj": { en: "Objective." },
+
+    "day.mon.name": { en: "Monday" },
+    "day.mon.theme": { en: "Motivation & Mindset" },
+    "day.mon.lead": { en: "Start the week aligned and strengthened." },
+    "day.mon.obj": { en: "Help women begin the week with clarity, intention, discipline, and emotional strength." },
+    "day.mon.i1": { en: "Mindset shifts" },
+    "day.mon.i2": { en: "Self-confidence reminders" },
+    "day.mon.i3": { en: "Self-esteem and identity" },
+    "day.mon.i4": { en: "Discipline over motivation" },
+    "day.mon.i5": { en: "Encouragement to take action" },
+    "day.mon.i6": { en: "Weekly intention setting" },
+    "day.mon.goal": { en: "Create emotional momentum and positive energy for the week." },
+
+    "day.tue.name": { en: "Tuesday" },
+    "day.tue.theme": { en: "Train Yourself" },
+    "day.tue.lead": { en: "Physical wellbeing & self-discipline." },
+    "day.tue.obj": { en: "Encourage movement, body awareness, consistency, and physical strengthening." },
+    "day.tue.i1": { en: "Workout reminders" },
+    "day.tue.i2": { en: "Fitness motivation" },
+    "day.tue.i3": { en: "Movement challenges" },
+    "day.tue.i4": { en: "Stretching and mobility" },
+    "day.tue.i5": { en: "Importance of consistency" },
+    "day.tue.i6": { en: "“Train your body, train your mind”" },
+    "day.tue.goal": { en: "Reinforce healthy habits and the connection between physical and mental strength." },
+
+    "day.wed.name": { en: "Wednesday" },
+    "day.wed.theme": { en: "Wellness Tip" },
+    "day.wed.lead": { en: "Nutrition, habits & lifestyle." },
+    "day.wed.obj": { en: "Educate women on how to create a healthier and more sustainable lifestyle." },
+    "day.wed.i1": { en: "Nutrition tips" },
+    "day.wed.i2": { en: "Healthy habits" },
+    "day.wed.i3": { en: "Nervous system regulation" },
+    "day.wed.i4": { en: "Sleep quality" },
+    "day.wed.i5": { en: "Hormonal health" },
+    "day.wed.i6": { en: "Energy management" },
+    "day.wed.i7": { en: "Hydration" },
+    "day.wed.i8": { en: "Lifestyle improvements" },
+    "day.wed.goal": { en: "Help women implement small consistent changes." },
+
+    "day.thu.name": { en: "Thursday" },
+    "day.thu.theme": { en: "Gratitude & Emotional Awareness" },
+    "day.thu.lead": { en: "Inner peace & emotional balance." },
+    "day.thu.obj": { en: "Create emotional grounding and strengthen mindfulness practices." },
+    "day.thu.i1": { en: "Gratitude exercises" },
+    "day.thu.i2": { en: "Reflection questions" },
+    "day.thu.i3": { en: "Journaling" },
+    "day.thu.i4": { en: "Emotional awareness" },
+    "day.thu.i5": { en: "Presence and mindfulness" },
+    "day.thu.i6": { en: "Positive affirmations" },
+    "day.thu.goal": { en: "Help women emotionally reconnect with themselves." },
+
+    "day.fri.name": { en: "Friday" },
+    "day.fri.theme": { en: "Wellness Curiosity" },
+    "day.fri.lead": { en: "Light, educational & fun content." },
+    "day.fri.obj": { en: "Keep the community engaged in a light and inspiring way." },
+    "day.fri.i1": { en: "Health curiosities" },
+    "day.fri.i2": { en: "Brain and body facts" },
+    "day.fri.i3": { en: "Mental health" },
+    "day.fri.i4": { en: "Hormones and energy" },
+    "day.fri.i5": { en: "Longevity" },
+    "day.fri.i6": { en: "Self-care ideas" },
+    "day.fri.i7": { en: "“Did you know?” style content" },
+    "day.fri.goal": { en: "Educate while creating a positive and fun experience." },
+
+    "day.sat.name": { en: "Saturday" },
+    "day.sat.theme": { en: "Offline Presence Day" },
+    "day.sat.lead": { en: "Rest, presence & real connection." },
+    "day.sat.obj": { en: "Allow participants to disconnect from notifications and live in the present." },
+    "day.sat.nomsg": { en: "No messages sent — a pause in the journey." },
+    "day.sat.i1": { en: "Family" },
+    "day.sat.i2": { en: "Nature" },
+    "day.sat.i3": { en: "Movement" },
+    "day.sat.i4": { en: "Joy" },
+    "day.sat.i5": { en: "Presence" },
+    "day.sat.i6": { en: "Real experiences" },
+    "day.sat.goal": { en: "Promote balance and healthy boundaries with digital communication." },
+
+    "day.sun.name": { en: "Sunday" },
+    "day.sun.theme": { en: "Reset & Preparation" },
+    "day.sun.lead": { en: "Reflection, planning & alignment." },
+    "day.sun.obj": { en: "Help women prepare emotionally and mentally for the new week." },
+    "day.sun.i1": { en: "Weekly reset checklist" },
+    "day.sun.i2": { en: "Meal prep" },
+    "day.sun.i3": { en: "Journaling" },
+    "day.sun.i4": { en: "Weekly planning" },
+    "day.sun.i5": { en: "Habit tracking" },
+    "day.sun.i6": { en: "Intention setting" },
+    "day.sun.i7": { en: "Reflection exercises" },
+    "day.sun.i8": { en: "Sunday meditation" },
+    "day.sun.goal": { en: "Create structure, clarity, and intentionality for the new week." },
+
+    "feel.eyebrow": { en: "The Goal is Freedom" },
+    "feel.title": { en: "How You'll Feel After" },
+    "feel.lead": { en: "This is what we're building toward — not just a better routine, but a completely transformed experience of life." },
+    "feel.c1.t": { en: "More Confident" },
+    "feel.c1.d": { en: "You'll walk into every room knowing exactly who you are." },
+    "feel.c2.t": { en: "More Energized" },
+    "feel.c2.d": { en: "Fueled by healthy habits and a body that feels strong and alive." },
+    "feel.c3.t": { en: "More Fulfilled" },
+    "feel.c3.d": { en: "Living with meaning, direction, and genuine hope for the future." },
+    "feel.c4.t": { en: "More Emotionally Stable" },
+    "feel.c4.d": { en: "Grounded, regulated, and no longer ruled by anxiety or fear." },
+
+    "rip.eyebrow": { en: "A Movement" },
+    "rip.title": { en: "Empowered Women Change Generations" },
+    "rip.lead": { en: "When one woman heals, an entire generation shifts. The ripple effects of a woman's transformation extend far beyond herself — flowing into every relationship, family, and community she touches." },
+    "rip.s1.t": { en: "She Heals" },
+    "rip.s1.d": { en: "A woman transforms from the inside out." },
+    "rip.s2.t": { en: "Family Thrives" },
+    "rip.s2.d": { en: "Healthier homes and stronger relationships emerge." },
+    "rip.s3.t": { en: "Children Flourish" },
+    "rip.s3.d": { en: "Kids grow in emotionally safe, nurturing environments." },
+    "rip.s4.t": { en: "Communities Rise" },
+    "rip.s4.d": { en: "Leaders emerge, circles strengthen, generations change." },
+
+    "cta.eyebrow": { en: "Join Us" },
+    "cta.title": { en: "Shape the Lifestyle You Deserve" },
+    "cta.lead": { en: "More than a program. More than a platform. Vida Bela is a movement of women who choose themselves, their healing, and their freedom every single day." },
+    "cta.btn": { en: "Join Vida Bela" },
+    "foot.tag": { en: "A lifestyle, not a program" }
+  };
+
+  // capture original PT text once so we can restore it
+  const i18nEls = Array.from(document.querySelectorAll("[data-i18n]"));
+  i18nEls.forEach((el) => { el.dataset.pt = el.textContent; });
+
+  function applyLang(lang) {
+    i18nEls.forEach((el) => {
+      const key = el.dataset.i18n;
+      if (lang === "en" && I18N[key] && I18N[key].en != null) {
+        el.textContent = I18N[key].en;
+      } else {
+        el.textContent = el.dataset.pt;
+      }
+    });
+    root.setAttribute("lang", lang);
+    localStorage.setItem("vb-lang", lang);
+    const lt = document.getElementById("langToggle");
+    if (lt) lt.querySelectorAll("[data-lang-label]").forEach((s) => {
+      s.classList.toggle("is-active", s.dataset.langLabel === lang);
+    });
+  }
+
+  const storedLang = localStorage.getItem("vb-lang") === "en" ? "en" : "pt";
+  applyLang(storedLang);
+  const langToggle = document.getElementById("langToggle");
+  if (langToggle) {
+    langToggle.addEventListener("click", () => {
+      applyLang(root.getAttribute("lang") === "en" ? "pt" : "en");
+    });
+  }
+
   /* ---------- SCROLL REVEAL ---------- */
   const revealEls = document.querySelectorAll("[data-reveal]");
   if ("IntersectionObserver" in window && !prefersReduced) {

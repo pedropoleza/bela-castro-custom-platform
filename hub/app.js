@@ -54,6 +54,12 @@ const DAY_PT = {
 };
 const dayShort = (day) => LANG === "pt" ? DAY_PT[day].short : day.slice(0, 3);
 const dayTheme = (d) => LANG === "pt" ? DAY_PT[d.day].theme : d.theme;
+// A day is offline only if it's an offline-by-default day AND the user hasn't enabled it.
+const isOffline = (d) => {
+  const def = typeof d === "string" ? DAY_DEFS.find((x) => x.day === d) : d;
+  if (!def || !def.offline) return false;
+  return !(state.dayState[def.day] && state.dayState[def.day].enabled);
+};
 
 const VARIABLES = [
   "{{contact.first_name}}", "{{contact.full_name}}", "{{contact.email}}",
@@ -158,7 +164,7 @@ const seedSettings = () => ({
   workflows: { ...WORKFLOWS },
   defaultTimes: { Monday: "08:00", Tuesday: "08:00", Wednesday: "08:30", Thursday: "09:00", Friday: "10:00", Saturday: "", Sunday: "18:00" },
   excludedTags: [],
-  drip: { batch: 20, everySec: 30 },
+  drip: { batch: 2, everySec: 60 },
   engagement: { flagAfter: 3, flagTag: "sem-resposta" }, // auto-flag non-responders
   channel: "stevo", // "stevo" (WhatsApp w/ buttons) | "ghl" (workflow)
   fieldMap: {
@@ -173,10 +179,10 @@ const seedSettings = () => ({
 
 /* ---------------- persistent state ---------------- */
 // bump to reset stored messages/schedule when seed defaults change
-const STORE_VER = "3";
+const STORE_VER = "4";
 try {
   if (localStorage.getItem("iwh_ver") !== STORE_VER) {
-    ["messages", "dayState", "logs"].forEach((k) => localStorage.removeItem("iwh_" + k));
+    ["messages", "dayState", "logs", "settings"].forEach((k) => localStorage.removeItem("iwh_" + k));
     localStorage.setItem("iwh_ver", STORE_VER);
   }
 } catch {}
@@ -244,7 +250,7 @@ function recordSend(eligible) {
 }
 
 /* ---------------- drip mode (always on) ---------------- */
-const dripCfg = () => state.settings.drip || { batch: 20, everySec: 30 };
+const dripCfg = () => state.settings.drip || { batch: 2, everySec: 60 };
 async function dripSend({ msg, wfId, eligible, f, logDispatch, button }) {
   const drip = dripCfg();
   const channel = state.settings.channel || "stevo";
@@ -399,20 +405,22 @@ screens.dashboard = () => {
   const scheduledCount = DAY_DEFS.filter((d) => state.dayState[d.day].status === "scheduled").length;
   const cells = DAY_DEFS.map((d) => {
     const ds = state.dayState[d.day];
+    const off = isOffline(d);
     const time = state.settings.defaultTimes[d.day];
     const msg = state.messages.find((m) => m.day === d.day && m.status !== "archived");
-    const label = d.offline ? t("Folga", "Offline") : (ds.status === "paused" ? t("Pausado", "Paused") : (ds.status === "scheduled" ? t("Vai enviar", "Will send") : ds.status));
-    return `<div class="sched__day ${d.offline ? "is-offline" : ""} ${(!d.offline && ds.status === "scheduled") ? "is-on" : ""}">
-      <div class="sched__head"><span class="sched__dow">${dayShort(d.day)}</span><span class="sched__time">${d.offline ? "—" : (time || "—")}</span></div>
-      <span class="pill ${statusClass(d.offline ? "paused" : ds.status)}">${label}</span>
-      ${d.offline
+    const label = off ? t("Folga", "Offline") : (ds.status === "paused" ? t("Pausado", "Paused") : (ds.status === "scheduled" ? t("Vai enviar", "Will send") : ds.status));
+    return `<div class="sched__day ${off ? "is-offline" : ""} ${(!off && ds.status === "scheduled") ? "is-on" : ""}">
+      <div class="sched__head"><span class="sched__dow">${dayShort(d.day)}</span><span class="sched__time">${off ? "—" : (time || "—")}</span></div>
+      <span class="pill ${statusClass(off ? "paused" : ds.status)}">${label}</span>
+      ${off
         ? `<div class="sched__msg">${t("Dia de descanso — sem envio.", "Rest day — no message sent.")}</div>`
         : `<div class="sched__theme">${esc(dayTheme(d))}</div><div class="sched__msg">${msg ? "✉ " + esc(msg.title) : t("sem mensagem", "no message picked")}</div>`}
       <div class="sched__foot">
-        ${d.offline
-          ? `<button class="btn btn--soft btn--sm" data-act="resume" data-day="${d.day}">${t("Ativar", "Enable")}</button>`
+        ${off
+          ? `<button class="btn btn--soft btn--sm" data-act="enable-day" data-day="${d.day}">${t("Ativar", "Enable")}</button>`
           : `<button class="btn btn--primary btn--sm" data-open-day="${d.day}">${t("Abrir", "Open")}</button>
-             <button class="btn btn--ghost btn--sm" data-act="${ds.status === "paused" ? "resume" : "pause"}" data-day="${d.day}">${ds.status === "paused" ? t("Retomar", "Resume") : t("Pausar", "Pause")}</button>`}
+             <button class="btn btn--ghost btn--sm" data-act="${ds.status === "paused" ? "resume" : "pause"}" data-day="${d.day}">${ds.status === "paused" ? t("Retomar", "Resume") : t("Pausar", "Pause")}</button>
+             ${d.offline ? `<button class="btn btn--ghost btn--sm" data-act="disable-day" data-day="${d.day}">${t("Desativar", "Disable")}</button>` : ""}`}
       </div>
     </div>`;
   }).join("");
@@ -430,7 +438,7 @@ screens.dashboard = () => {
     </div>
     <div class="panel-title">${t("Agenda da semana", "Weekly schedule")}</div>
     <div class="sched">${cells}</div>
-    ${openDay && openDef && !openDef.offline ? `
+    ${openDay && openDef && !isOffline(openDef) ? `
       <div class="daypanel">
         <div class="daypanel__bar">
           <div><strong>${esc(openDay)}</strong> · ${esc(dayTheme(openDef))} — ${t("gerencie tudo aqui", "manage everything here")}</div>
@@ -445,7 +453,7 @@ function dashInfo(today) {
   const ds = state.dayState[today.day];
   const recent = state.logs.slice(0, 5);
   const chLabel = state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow";
-  const todayBlock = today.offline
+  const todayBlock = isOffline(today)
     ? `<p class="muted">${t("Hoje é dia de descanso (offline) — sem envio.", "Today is an offline rest day — no message.")}</p>`
     : `<div class="row between" style="margin-bottom:10px"><strong>${dayShort(today.day)} · ${esc(dayTheme(today))}</strong><span class="pill ${statusClass(ds.status)}">${ds.status === "scheduled" ? t("Vai enviar", "Will send") : ds.status}</span></div>
        <p class="muted mb" style="font-size:.85rem">${t("Horário", "Time")}: ${state.settings.defaultTimes[today.day] || "—"}</p>
@@ -466,7 +474,14 @@ function dashInfo(today) {
       <div class="card">
         <div class="panel-title">${t("Automação", "Automation")}</div>
         <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">${t("Canal", "Channel")}</span><strong>${chLabel}</strong></div>
-        <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">Drip</span><strong>${dripCfg().batch}/${t("lote", "batch")} · ${dripCfg().everySec}s</strong></div>
+        <div style="padding:6px 0;font-size:.86rem"><span class="muted">Drip</span>
+          <div class="row" style="gap:8px;margin-top:6px">
+            <input class="input" type="number" min="1" id="auto-drip-batch" value="${dripCfg().batch}" style="width:64px" title="${t("Mensagens por lote", "Messages per batch")}">
+            <span class="muted" style="align-self:center">${t("por lote a cada", "per batch every")}</span>
+            <input class="input" type="number" min="1" id="auto-drip-every" value="${dripCfg().everySec}" style="width:72px" title="${t("Segundos entre lotes", "Seconds between batches")}">
+            <span class="muted" style="align-self:center">s</span>
+          </div>
+        </div>
         <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">${t("Parar após sem resposta", "Stop after no-reply")}</span><strong>${engCfg().flagAfter}</strong></div>
         <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">${t("Sem resposta (flag)", "Flagged no-reply")}</span><strong>${nonResponders().length}</strong></div>
         <a class="btn btn--soft btn--sm mt" href="#/settings">${t("Ajustar automação", "Adjust automation")}</a>
@@ -537,7 +552,7 @@ screens.library = (params) => {
       </div>`).join("") : `<p class="muted mb">${t("Nenhuma mensagem para", "No messages yet for")} ${dn}.</p>`;
     return `<div class="card mb">
       <div class="row between mb"><div><h3 style="font-family:var(--display)">${dn} — ${esc(dayTheme(def))}</h3><span class="muted" style="font-size:.82rem">${esc(def.objective)}</span></div>
-      ${def.offline ? `<span class="pill pill--muted">${t("Dia offline", "Offline day")}</span>` : `<button class="btn btn--soft btn--sm" data-act="new" data-day="${dn}">+ ${t("Nova mensagem", "New message")}</button>`}</div>
+      ${isOffline(dn) ? `<span class="pill pill--muted">${t("Dia offline", "Offline day")}</span>` : `<button class="btn btn--soft btn--sm" data-act="new" data-day="${dn}">+ ${t("Nova mensagem", "New message")}</button>`}</div>
       ${rows}</div>`;
   }).join("");
   return `<h1 class="section-title">${t("Mensagens", "Message Library")}</h1><p class="section-sub">${t("Crie e gerencie variações de mensagem para cada dia.", "Create and manage message variations for each weekday.")} ${day ? `${t("Filtrado por", "Filtered to")} <strong>${esc(day)}</strong> · <a href="#/library" style="color:var(--accent)">${t("ver todas", "show all")}</a>` : t("Use variáveis para personalizar cada mensagem.", "Use placeholders to personalize each message.")}</p>${groups}`;
@@ -629,7 +644,7 @@ function dispatchPanels() {
   const msg = state.messages.find((m) => m.id === state.dispatch.messageId);
   const f = currentFilters();
   const count = applyFilters(state.contacts, f).length;
-  const offlineWarn = msg && msg.day === "Saturday";
+  const offlineWarn = msg && isOffline(msg.day);
   const opt = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option ${x === v ? "selected" : ""}>${esc(x)}</option>`).join("");
   const optF = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option value="${esc(x.key)}" ${x.key === v ? "selected" : ""}>${esc(x.name)}</option>`).join("");
   const vars = VARIABLES.map((v) => `<button class="var-chip" data-var="${esc(v)}">${esc(v)}</button>`).join("");
@@ -675,7 +690,11 @@ function dispatchPanels() {
         <div class="panel-title">3 · ${t("Enviar", "Send")}</div>
         <div class="audience-count" id="aud-count">${count}</div>
         <p class="muted" id="aud-summary" style="font-size:.84rem">${t("elegíveis após exclusões de segurança", "eligible after safety exclusions")}</p>
-        <div class="drip-note">🩸 ${t("Modo drip (sempre ativo)", "Drip mode (always on)")}: ${dripCfg().batch}/${t("lote", "batch")} · ${t("a cada", "every")} ${dripCfg().everySec}s · via ${state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow"}</div>
+        <div class="drip-note">🩸 ${t("Modo drip (sempre ativo)", "Drip mode (always on)")} · via ${state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow"}</div>
+        <div class="drip-edit row" style="gap:10px;margin-top:8px">
+          <div class="field" style="flex:1"><label>${t("Mensagens por lote", "Messages per batch")}</label><input class="input" type="number" min="1" id="d-drip-batch" value="${dripCfg().batch}"></div>
+          <div class="field" style="flex:1"><label>${t("Segundos entre lotes", "Seconds between batches")}</label><input class="input" type="number" min="1" id="d-drip-every" value="${dripCfg().everySec}"></div>
+        </div>
         <div id="d-warn"></div>
         <div class="row mt" style="gap:10px">
           <button class="btn btn--soft" id="d-test" ${!msg ? "disabled" : ""}>${t("Testar", "Send test")}</button>
@@ -760,8 +779,8 @@ screens.settings = () => {
         <div class="panel-title">Drip mode <span class="pill pill--accent">always on</span></div>
         <p class="muted mb" style="font-size:.82rem">Dispatches always go out gradually, never all at once — protects deliverability and avoids spam flags.</p>
         <div class="row" style="gap:12px">
-          <div class="field" style="flex:1"><label>Contacts per batch</label><input class="input" type="number" min="1" id="set-drip-batch" value="${(s.drip || { batch: 20 }).batch}"></div>
-          <div class="field" style="flex:1"><label>Seconds between batches</label><input class="input" type="number" min="1" id="set-drip-every" value="${(s.drip || { everySec: 30 }).everySec}"></div>
+          <div class="field" style="flex:1"><label>${t("Mensagens por lote", "Messages per batch")}</label><input class="input" type="number" min="1" id="set-drip-batch" value="${(s.drip || { batch: 2 }).batch}"></div>
+          <div class="field" style="flex:1"><label>${t("Segundos entre lotes", "Seconds between batches")}</label><input class="input" type="number" min="1" id="set-drip-every" value="${(s.drip || { everySec: 60 }).everySec}"></div>
         </div>
         <div class="field" style="margin-bottom:0"><label>Flag non-responders after N sends (auto-excludes them)</label><input class="input" type="number" min="1" id="set-flagafter" value="${(s.engagement || { flagAfter: 3 }).flagAfter}"></div>
       </div>
@@ -792,6 +811,28 @@ function wire(route, params) {
     persist(); toast(`${day} ${b.dataset.act === "pause" ? "paused" : "resumed"}.`); render();
   });
 
+  // dashboard: enable an offline-by-default day (e.g. Saturday) so it becomes configurable
+  root.querySelectorAll("[data-act='enable-day']").forEach((b) => b.onclick = () => {
+    const day = b.dataset.day;
+    state.dayState[day].enabled = true;
+    state.dayState[day].status = "scheduled";
+    if (!state.settings.defaultTimes[day]) state.settings.defaultTimes[day] = "10:00";
+    // make sure there is a message to send on this day
+    if (!state.messages.some((m) => m.day === day && m.status !== "archived")) {
+      state.messages.push({ id: uid("msg"), day, title: t(`${day} — Nova mensagem`, `${day} — New message`), channel: "WhatsApp", status: "draft", version: 1, created: new Date().toISOString(), edited: new Date().toISOString(), body: t("Oi {{contact.first_name}}!", "Hi {{contact.first_name}}!") });
+    }
+    persist(); toast(t(`${day} ativado.`, `${day} enabled.`)); render();
+  });
+
+  // dashboard: turn an enabled offline day back off
+  root.querySelectorAll("[data-act='disable-day']").forEach((b) => b.onclick = () => {
+    const day = b.dataset.day;
+    state.dayState[day].enabled = false;
+    state.dayState[day].status = "paused";
+    if (state.ui.dayOpen === day) state.ui.dayOpen = null;
+    persist(); toast(t(`${day} desativado (offline).`, `${day} disabled (offline).`)); render();
+  });
+
   // dashboard: open a day's full management panel inline
   root.querySelectorAll("[data-open-day]").forEach((b) => b.onclick = () => {
     const day = b.dataset.openDay;
@@ -802,6 +843,15 @@ function wire(route, params) {
   });
   const closeDay = root.querySelector("[data-close-day]");
   closeDay && (closeDay.onclick = () => { state.ui.dayOpen = null; render(); });
+
+  // dashboard automation card: edit drip pacing inline
+  const saveAutoDrip = () => {
+    const b = parseInt($("#auto-drip-batch").value, 10), e = parseInt($("#auto-drip-every").value, 10);
+    state.settings.drip = { batch: b > 0 ? b : 2, everySec: e > 0 ? e : 60 };
+    persist(); toast(t("Drip atualizado.", "Drip updated."));
+  };
+  $("#auto-drip-batch") && $("#auto-drip-batch").addEventListener("change", saveAutoDrip);
+  $("#auto-drip-every") && $("#auto-drip-every").addEventListener("change", saveAutoDrip);
 
   if (route === "library") {
     root.querySelectorAll("[data-act='new']").forEach((b) => b.onclick = () => {
@@ -889,7 +939,7 @@ function wire(route, params) {
       $("#aud-summary").textContent = filtersSummary(f) + " · " + n + " eligible after safety exclusions";
       const wfId = msg ? state.settings.workflows[msg.day] : null;
       const warn = (!msg) ? "" :
-        (msg.day === "Saturday") ? "Saturday is an offline day — no message sent." :
+        (isOffline(msg.day)) ? t("Dia offline — nenhuma mensagem é enviada.", "Offline day — no message sent.") :
         (!wfId) ? "No workflow mapped for this day (set it in Settings)." :
         (n > 250) ? `High volume (${n}). Double-check before sending.` :
         (!f.tag && !f.field && !f.pipeline && !f.source) ? "No filter — this targets the whole eligible base." : "";
@@ -899,6 +949,14 @@ function wire(route, params) {
     $("#f-optout") && $("#f-optout").addEventListener("change", recount);
     $("#f-paused") && $("#f-paused").addEventListener("change", recount);
     recount();
+    // editable drip pacing (persists to settings, used by the dispatch automation)
+    const saveDrip = () => {
+      const b = parseInt($("#d-drip-batch").value, 10), e = parseInt($("#d-drip-every").value, 10);
+      state.settings.drip = { batch: b > 0 ? b : 2, everySec: e > 0 ? e : 60 };
+      persist();
+    };
+    $("#d-drip-batch") && $("#d-drip-batch").addEventListener("change", saveDrip);
+    $("#d-drip-every") && $("#d-drip-every").addEventListener("change", saveDrip);
     // one-click audience presets
     root.querySelectorAll("[data-preset]").forEach((b) => b.onclick = () => {
       const pr = audiencePresets()[+b.dataset.preset];
@@ -991,7 +1049,7 @@ function wire(route, params) {
       state.settings.excludedTags = [...root.querySelectorAll("[data-extag]:checked")].map((i) => i.dataset.extag);
       state.settings.testContact = $("#set-test").value.trim();
       const batch = parseInt($("#set-drip-batch").value, 10), every = parseInt($("#set-drip-every").value, 10);
-      state.settings.drip = { batch: batch > 0 ? batch : 20, everySec: every > 0 ? every : 30 };
+      state.settings.drip = { batch: batch > 0 ? batch : 2, everySec: every > 0 ? every : 60 };
       const flagAfter = parseInt($("#set-flagafter").value, 10);
       state.settings.engagement = { flagAfter: flagAfter > 0 ? flagAfter : 3, flagTag: engCfg().flagTag };
       const ch = $("#set-channel"); if (ch) state.settings.channel = ch.value;
@@ -1011,16 +1069,28 @@ function parseHash() {
   const [path, query] = h.split("?");
   return { route: path || "dashboard", params: new URLSearchParams(query || "") };
 }
+let _lastRoute = null, _lastDay = undefined;
 function render() {
   const { route, params } = parseHash();
   $("#modalRoot").innerHTML = "";
   const view = screens[route] || screens.dashboard;
   const sc = $("#screen");
+  const routeChanged = route !== _lastRoute;
   sc.innerHTML = view(params);
-  sc.style.animation = "none"; void sc.offsetWidth; sc.style.animation = ""; // replay fade on content swap
+  // Animate the screen only on an actual route change — not on in-screen re-renders
+  // (preset clicks, opening a day, etc.) so the app feels stable, not flickery.
+  sc.classList.remove("is-enter");
+  if (routeChanged) { void sc.offsetWidth; sc.classList.add("is-enter"); }
+  // Animate a day panel only when a day is newly opened.
+  const dayOpen = state.ui.dayOpen;
+  if (dayOpen && dayOpen !== _lastDay) {
+    const dp = sc.querySelector(".daypanel");
+    if (dp) { dp.classList.remove("is-enter"); void dp.offsetWidth; dp.classList.add("is-enter"); }
+  }
+  _lastRoute = route; _lastDay = dayOpen;
   $("#nav").innerHTML = NAV().map((n) => `<a href="#/${n.id}" data-route="${n.id}" class="${n.id === route ? "is-active" : ""}">${n.ic}<span>${n.label}</span></a>`).join("");
   $("#langToggle") && $("#langToggle").querySelectorAll("[data-l]").forEach((s) => s.classList.toggle("on", s.dataset.l === LANG));
-  window.scrollTo(0, 0);
+  if (routeChanged) window.scrollTo(0, 0);
   wire(route, params);
 }
 

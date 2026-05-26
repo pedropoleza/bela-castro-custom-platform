@@ -304,10 +304,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.84rem; white-sp
   .filter-row { grid-template-columns: 1fr; }
 }
 /* ---------- fluid microinteractions ---------- */
-@keyframes hub-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes hub-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-.screen { animation: hub-fade 0.22s var(--ease); }
-.daypanel { animation: hub-rise 0.34s var(--ease) both; }
+@keyframes hub-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* only animate on real tab change / panel open — in-screen updates stay stable */
+.screen.is-enter { animation: hub-rise 0.32s var(--ease); }
+.daypanel.is-enter { animation: hub-rise 0.36s var(--ease) both; }
 /* gentle lift on interactive cards */
 .sched__day, .ministat, .dash-info .card, .list-item {
   transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);

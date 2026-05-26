@@ -179,8 +179,6 @@ async function loadLive() {
     if (f && !f.mock && Array.isArray(f.fields) && f.fields.length) state.customFields = f.fields;
     if (c && !c.mock && Array.isArray(c.contacts)) { state.contacts = c.contacts; state.live = true; }
   } catch {}
-  const pill = document.getElementById("connState");
-  if (pill) { pill.textContent = state.live ? "Live · GoHighLevel" : "Mock data"; pill.className = "pill " + (state.live ? "pill--ok" : "pill--muted"); }
 }
 
 /* ---------------- audience logic ---------------- */
@@ -271,20 +269,17 @@ const screens = {};
 screens.dashboard = () => {
   const todayIdx = (new Date().getDay() + 6) % 7; // Mon=0
   const today = DAY_DEFS[todayIdx];
-  const activeContacts = state.contacts.filter((c) => c.tags.includes("weekly-messages-active") && c.status === "active").length;
+  const activeContacts = state.contacts.filter((c) => c.status === "active").length;
   const scheduled = state.logs.filter((l) => l.status === "scheduled").length;
-  const last = state.logs.find((l) => l.status === "sent" || l.status === "partially sent");
   const cards = DAY_DEFS.map((d) => dayCard(d)).join("");
   return `
-    <h1 class="section-title">Weekly Overview</h1>
-    <p class="section-sub">Control Isabela's weekly CRM message campaigns across the week.</p>
+    <h1 class="section-title">This week</h1>
+    <p class="section-sub">Pick a day to review its message, choose who receives it and send.</p>
     <div class="stat-row">
-      <div class="card stat"><div class="stat__label">Today · Recommended</div><div class="stat__value" style="font-size:1.3rem">${today.theme}</div><div class="stat__hint">${today.day}${today.offline ? " · no send by default" : ""}</div></div>
-      <div class="card stat"><div class="stat__label">Active Contacts</div><div class="stat__value">${activeContacts}</div><div class="stat__hint">tag: weekly-messages-active</div></div>
-      <div class="card stat"><div class="stat__label">Scheduled This Week</div><div class="stat__value">${scheduled}</div><div class="stat__hint">across the calendar</div></div>
-      <div class="card stat"><div class="stat__label">Last Dispatch</div><div class="stat__value" style="font-size:1.3rem">${last ? last.sent + " sent" : "—"}</div><div class="stat__hint">${last ? last.id + " · " + last.day : "no dispatch yet"}</div></div>
+      <div class="card stat"><div class="stat__label">Today</div><div class="stat__value" style="font-size:1.2rem">${today.theme}</div><div class="stat__hint">${today.day}${today.offline ? " · rest day" : ""}</div></div>
+      <div class="card stat"><div class="stat__label">Contacts</div><div class="stat__value">${activeContacts}</div><div class="stat__hint">able to receive</div></div>
+      <div class="card stat"><div class="stat__label">Scheduled</div><div class="stat__value">${scheduled}</div><div class="stat__hint">this week</div></div>
     </div>
-    <div class="row between mb"><h2 class="panel-title" style="margin:0">The Week</h2><a class="btn btn--primary btn--sm" href="#/dispatch">${icon('<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/>')} Quick send</a></div>
     <div class="day-grid">${cards}</div>`;
 };
 
@@ -730,15 +725,6 @@ function render() {
 function init() {
   // build nav
   $("#nav").innerHTML = NAV.map((n) => `<a href="#/${n.id}" data-route="${n.id}">${n.ic}<span>${n.label}</span></a>`).join("");
-  // theme
-  const savedTheme = localStorage.getItem("iwh_theme");
-  if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
-  const setThemeLabel = () => $("#themeLabel").textContent = document.documentElement.getAttribute("data-theme") === "light" ? "Light" : "Dark";
-  setThemeLabel();
-  $("#themeToggle").onclick = () => {
-    const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", next); localStorage.setItem("iwh_theme", next); setThemeLabel();
-  };
   window.addEventListener("hashchange", render);
   render();                                  // instant paint (seed data)
   loadLive().then(render);                   // refresh with real GoHighLevel data

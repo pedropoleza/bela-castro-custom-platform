@@ -31,22 +31,7 @@
   --sidebar-border: rgba(255, 255, 255, 0.08);
 }
 [data-theme="dark"] {
-  --bg: #0e1726;
-  --card: #16223a;
-  --card-2: #1c2b46;
-  --text: #e8eef7;
-  --muted: #93a1b8;
-  --accent: #3a9bff;
-  --accent-2: #2a7fe0;
-  --line: rgba(255, 255, 255, 0.10);
-  --line-2: rgba(255, 255, 255, 0.05);
-  --shadow: 0 24px 60px -32px rgba(0, 0, 0, 0.7);
-  --on-accent: #06101f;
-  --sidebar-bg: linear-gradient(180deg, #13203a 0%, #0b1424 100%);
-  --sidebar-text: #9fb0cc;
-  --sidebar-active-bg: rgba(58, 155, 255, 0.24);
-  --sidebar-active-text: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.07);
+  /* dark mode removed — app is light-only for simplicity */
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -101,15 +86,6 @@ h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
 .topnav a.is-active { color: var(--accent); border-bottom-color: var(--accent); }
 
 .topbar__right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: none; }
-.theme-toggle {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 7px 12px; border-radius: 100px;
-  border: 1px solid var(--line); background: var(--card-2);
-  color: var(--muted); cursor: pointer; font-weight: 600; font-size: 0.8rem;
-  transition: border-color 0.25s var(--ease);
-}
-.theme-toggle:hover { border-color: var(--accent); color: var(--text); }
-.theme-toggle__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); }
 .avatar {
   width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
   background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--on-accent);

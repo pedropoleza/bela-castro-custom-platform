@@ -277,10 +277,8 @@ function modal({ title, body, warn, confirmLabel = "Confirm", danger, onConfirm 
 const icon = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const NAV = [
   { id: "dashboard", label: "Dashboard", ic: icon('<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>') },
-  { id: "calendar", label: "Weekly Calendar", ic: icon('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>') },
-  { id: "library", label: "Message Library", ic: icon('<path d="M4 5h16M4 12h16M4 19h10"/>') },
-  { id: "audience", label: "Audience Builder", ic: icon('<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2"/><path d="M15 20c0-2 1.5-3.5 4-3.5"/>') },
-  { id: "dispatch", label: "Dispatch Center", ic: icon('<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/>') },
+  { id: "library", label: "Messages", ic: icon('<path d="M4 5h16M4 12h16M4 19h10"/>') },
+  { id: "dispatch", label: "Send", ic: icon('<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/>') },
   { id: "logs", label: "Logs", ic: icon('<path d="M8 6h12M8 12h12M8 18h12M3 6h.01M3 12h.01M3 18h.01"/>') },
   { id: "settings", label: "Settings", ic: icon('<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 0 0-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 0 0-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.3-1a7 7 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7 7 0 0 0 1.7-1l2.3 1 2-3.5-2-1.5a7 7 0 0 0 .1-1Z"/>') }
 ];
@@ -466,9 +464,10 @@ screens.dispatch = (params) => {
   const eligible = applyFilters(state.contacts, f);
   const count = eligible.length;
   const offlineWarn = msg && msg.day === "Saturday";
-  const noFilter = !f.tag && !f.withoutTag && !f.field && !f.pipeline && !f.source;
+  const opt = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option ${x === v ? "selected" : ""}>${esc(x)}</option>`).join("");
+  const optF = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option value="${esc(x.key)}" ${x.key === v ? "selected" : ""}>${esc(x.name)}</option>`).join("");
   return `
-    <h1 class="section-title">Dispatch Center</h1><p class="section-sub">Confirm the message and audience, run a test, then send now or schedule. Every dispatch is logged.</p>
+    <h1 class="section-title">Send</h1><p class="section-sub">Choose the message, pick who receives it, then send now or schedule. Every dispatch is logged.</p>
     <div class="split">
       <div class="card">
         <div class="panel-title">1 · Message</div>
@@ -477,17 +476,30 @@ screens.dispatch = (params) => {
           ${state.messages.filter((m) => m.status !== "archived").map((m) => `<option value="${m.id}" ${m.id === state.dispatch.messageId ? "selected" : ""}>${esc(m.day)} · ${esc(m.title)}</option>`).join("")}
         </select></div>
         ${msg ? `<div class="preview-phone"><div class="bubble">${esc(renderMessage(msg.body))}</div><div class="preview-meta">${esc(msg.channel)} · workflow: ${state.settings.workflows[msg.day] || "— (offline)"}</div></div>` : `<p class="muted">Select a message to preview it.</p>`}
-        <div class="panel-title mt">2 · Audience</div>
-        <p class="muted" style="font-size:.84rem">${esc(filtersSummary(f))}</p>
-        <a class="btn btn--ghost btn--sm" href="#/audience">Edit audience →</a>
+        <div class="panel-title mt">2 · Who receives it</div>
+        <div class="filter-row">
+          <div class="field" style="margin:0"><label>Has tag</label><select class="select" id="f-tag">${opt(state.tags, f.tag)}</select></div>
+          <div class="field" style="margin:0"><label>Without tag</label><select class="select" id="f-withoutTag">${opt(state.tags, f.withoutTag)}</select></div>
+          <span></span>
+        </div>
+        <div class="filter-row">
+          <div class="field" style="margin:0"><label>Custom field</label><select class="select" id="f-field">${optF(state.customFields, f.field)}</select></div>
+          <div class="field" style="margin:0"><label>Field value equals</label><input class="input" id="f-fieldValue" value="${esc(f.fieldValue)}" placeholder="e.g. Português"></div>
+          <span></span>
+        </div>
+        <div class="filter-row">
+          <div class="field" style="margin:0"><label>Pipeline stage</label><select class="select" id="f-pipeline">${opt(["Lead", "Onboarding", "Active Client", "Renewal"], f.pipeline)}</select></div>
+          <div class="field" style="margin:0"><label>Source</label><select class="select" id="f-source">${opt(["Instagram", "Referral", "Ad", "Organic"], f.source)}</select></div>
+          <span></span>
+        </div>
+        <div class="checkline"><input type="checkbox" id="f-optout" ${f.excludeOptout ? "checked" : ""}><label for="f-optout">Exclude opt-out contacts (always on)</label></div>
+        <div class="checkline"><input type="checkbox" id="f-paused" ${f.excludePaused ? "checked" : ""}><label for="f-paused">Exclude paused contacts</label></div>
       </div>
       <div class="card card--glass">
         <div class="panel-title">3 · Send</div>
-        <div class="audience-count">${count}</div>
-        <p class="muted" style="font-size:.84rem">eligible contacts after safety exclusions</p>
-        ${offlineWarn ? `<div class="modal__warn mt">Saturday is an Offline Presence Day — no workflow is triggered by default.</div>` : ""}
-        ${noFilter ? `<div class="modal__warn mt">No audience filter selected — this targets the entire eligible base.</div>` : ""}
-        ${count > 250 ? `<div class="modal__warn mt">High audience volume (${count}). Double-check before sending.</div>` : ""}
+        <div class="audience-count" id="aud-count">${count}</div>
+        <p class="muted" id="aud-summary" style="font-size:.84rem">eligible after safety exclusions</p>
+        <div id="d-warn"></div>
         <div class="row mt" style="gap:10px">
           <button class="btn btn--soft" id="d-test" ${!msg ? "disabled" : ""}>Send test</button>
           <button class="btn btn--ghost" id="d-schedule" ${!msg ? "disabled" : ""}>Schedule</button>
@@ -640,24 +652,44 @@ function wire(route, params) {
   if (route === "dispatch") {
     const msgSel = $("#d-msg");
     msgSel && (msgSel.onchange = () => { state.dispatch.messageId = msgSel.value || null; render(); });
-    const f = currentFilters();
-    const eligible = applyFilters(state.contacts, f);
     const msg = state.messages.find((m) => m.id === state.dispatch.messageId);
-    const logDispatch = (status, res) => {
+
+    // read the inline audience filters live
+    const readFilters = () => ({
+      tag: $("#f-tag").value, withoutTag: $("#f-withoutTag").value, field: $("#f-field").value,
+      fieldValue: $("#f-fieldValue").value.trim(), pipeline: $("#f-pipeline").value, source: $("#f-source").value,
+      contactStatus: "", excludeOptout: $("#f-optout").checked, excludePaused: $("#f-paused").checked
+    });
+    const eligibleNow = () => applyFilters(state.contacts, readFilters());
+    const recount = () => {
+      const f = readFilters(); state.dispatch.filters = f;
+      const n = applyFilters(state.contacts, f).length;
+      $("#aud-count").textContent = n;
+      $("#aud-summary").textContent = filtersSummary(f) + " · " + n + " eligible after safety exclusions";
+      const wfId = msg ? state.settings.workflows[msg.day] : null;
+      const warn = (!msg) ? "" :
+        (msg.day === "Saturday") ? "Saturday is an offline day — no message sent." :
+        (!wfId) ? "No workflow mapped for this day (set it in Settings)." :
+        (n > 250) ? `High volume (${n}). Double-check before sending.` :
+        (!f.tag && !f.field && !f.pipeline && !f.source) ? "No filter — this targets the whole eligible base." : "";
+      $("#d-warn").innerHTML = warn ? `<div class="modal__warn mt">${esc(warn)}</div>` : "";
+    };
+    ["tag", "withoutTag", "field", "fieldValue", "pipeline", "source"].forEach((i) => { const el = $("#f-" + i); el && el.addEventListener("input", recount); });
+    $("#f-optout") && $("#f-optout").addEventListener("change", recount);
+    $("#f-paused") && $("#f-paused").addEventListener("change", recount);
+    recount();
+    if (!msg) return;
+
+    const logDispatch = (status, res, f, eligible) => {
       state.logs.unshift({
         id: res.dispatchId || uid("DSP"), day: msg.day, title: msg.title, filters: filtersSummary(f),
         estimated: eligible.length, sent: res.sent || 0, failed: res.failed || 0, skipped: res.skipped || 0,
         when: new Date().toISOString(), user: "Isabela", status, notes: "Workflow " + (state.settings.workflows[msg.day] || "—")
       });
-      // update day + contact metadata (mock CRM sync)
-      if (status === "sent" || status === "partially sent") {
-        state.dayState[msg.day].status = "sent"; state.dayState[msg.day].lastSent = new Date().toISOString();
-      } else if (status === "scheduled") {
-        state.dayState[msg.day].status = "scheduled";
-      }
+      if (status === "sent" || status === "partially sent") { state.dayState[msg.day].status = "sent"; state.dayState[msg.day].lastSent = new Date().toISOString(); }
+      else if (status === "scheduled") { state.dayState[msg.day].status = "scheduled"; }
       persist();
     };
-    const wfId = state.settings.workflows[msg.day]; // mapped GHL workflow id/name
     const test = $("#d-test"); test && (test.onclick = async () => {
       test.disabled = true;
       const res = await api.dispatchTest({ contactId: state.settings.testContact, channel: msg.channel, message: renderMessage(msg.body) });
@@ -666,12 +698,14 @@ function wire(route, params) {
       else toast(res && res.mock ? "Test (mock) ok — connect backend to really send." : "Test sent.");
     });
     const sched = $("#d-schedule"); sched && (sched.onclick = () => {
+      const f = readFilters(), eligible = eligibleNow();
       modal({ title: "Schedule dispatch", body: `Schedule <strong>${esc(msg.title)}</strong> for <strong>${eligible.length}</strong> contacts using ${esc(filtersSummary(f))}.`, confirmLabel: "Schedule", onConfirm: async () => {
         const res = await api.dispatchSchedule({ day: msg.day, when: state.settings.defaultTimes[msg.day], count: eligible.length });
-        logDispatch("scheduled", res || {}); toast("Dispatch scheduled."); render();
+        logDispatch("scheduled", res || {}, f, eligible); toast("Dispatch scheduled."); render();
       }});
     });
     const send = $("#d-send"); send && (send.onclick = () => {
+      const f = readFilters(), eligible = eligibleNow(), wfId = state.settings.workflows[msg.day];
       modal({
         title: "Confirm dispatch",
         warn: !wfId ? "No workflow mapped for this day (set it in Settings)." : (eligible.length > 250 ? `High volume: ${eligible.length} contacts.` : (!f.tag && !f.field && !f.pipeline && !f.source ? "No filter selected — entire eligible base." : "")),
@@ -680,10 +714,10 @@ function wire(route, params) {
           send.disabled = true;
           const res = await api.dispatchSend({ workflowId: wfId, contactIds: eligible.map((c) => c.id), day: msg.day });
           send.disabled = false;
-          if (res && res.error) { toast("Dispatch failed: " + res.error, true); logDispatch("failed", { sent: 0, failed: eligible.length }); render(); return; }
+          if (res && res.error) { toast("Dispatch failed: " + res.error, true); logDispatch("failed", { sent: 0, failed: eligible.length }, f, eligible); render(); return; }
           const sent = res && res.mock ? eligible.length : (res.sent || 0);
           const failed = (res && res.failed) || 0;
-          logDispatch(failed > 0 ? "partially sent" : "sent", { dispatchId: res.dispatchId, sent, failed, skipped: 0 });
+          logDispatch(failed > 0 ? "partially sent" : "sent", { dispatchId: res.dispatchId, sent, failed, skipped: 0 }, f, eligible);
           toast(`Dispatched: ${sent} sent, ${failed} failed.`); location.hash = "#/logs";
         }
       });

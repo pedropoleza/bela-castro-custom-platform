@@ -341,11 +341,13 @@
      and leaves/buds along it bloom as the drawing tip passes them.          */
   const SVGNS = "http://www.w3.org/2000/svg";
   const vineSvg = document.getElementById("vine");
-  const vinePath = document.getElementById("vinePath");
-  const vineGlow = document.getElementById("vinePathGlow");
+  const vineBranch = document.getElementById("vineBranch");
+  const vineGlow = document.getElementById("vineBranchGlow");
+  const vineClipRect = document.getElementById("vineClipRect");
   const leavesG = document.getElementById("vineLeaves");
   const leafEls = [];
-  let vineLen = 0;
+  let vineReady = false;
+  let docH = 1;
   let vh2 = window.innerHeight;
 
   // stem anchored to the LEFT side, entering from the top-left corner
@@ -401,87 +403,122 @@
     leafEls.push({ y: cy, el: g });
   }
 
+  // build a filled, tapering branch outline from a centerline
+  function branchPath(W, H) {
+    const pts = [{ x: W * 0.02, y: -34 }];
+    for (let y = 0; y <= H; y += 16) pts.push({ x: vineX(y, W), y });
+    const wBase = 17, wTip = 3.2;
+    const left = [], right = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
+      const nx = -dy, ny = dx;
+      const t = Math.max(0, Math.min(1, pts[i].y / H));
+      const w = (wTip + (wBase - wTip) * Math.pow(1 - t, 0.7)) / 2;
+      left.push([pts[i].x + nx * w, pts[i].y + ny * w]);
+      right.push([pts[i].x - nx * w, pts[i].y - ny * w]);
+    }
+    let d = "M " + left[0][0].toFixed(1) + " " + left[0][1].toFixed(1) + " ";
+    for (let i = 1; i < left.length; i++) d += "L " + left[i][0].toFixed(1) + " " + left[i][1].toFixed(1) + " ";
+    for (let i = right.length - 1; i >= 0; i--) d += "L " + right[i][0].toFixed(1) + " " + right[i][1].toFixed(1) + " ";
+    return d + "Z";
+  }
+
   function buildVine() {
-    if (!vineSvg || !vinePath) return;
+    if (!vineSvg || !vineBranch) return;
     const W = document.documentElement.clientWidth;
     const H = document.documentElement.scrollHeight;
+    docH = H;
     vineSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     vineSvg.setAttribute("width", W);
     vineSvg.setAttribute("height", H);
+    if (vineClipRect) { vineClipRect.setAttribute("width", W); }
 
-    // grow the stem down from the top-left corner
-    let d = "M " + (W * 0.02).toFixed(1) + " -24 ";
-    for (let y = 0; y <= H - 18; y += 20) {
-      d += "L " + vineX(y, W).toFixed(1) + " " + y + " ";
-    }
-    vinePath.setAttribute("d", d);
+    const d = branchPath(W, H);
+    vineBranch.setAttribute("d", d);
     vineGlow.setAttribute("d", d);
 
     leavesG.innerHTML = "";
     leafEls.length = 0;
     const slope = (y) => (vineX(y + 1, W) - vineX(y - 1, W)) / 2;
     const angAt = (y) => Math.atan(slope(y)) * 180 / Math.PI;
-    const reach = Math.min(W * 0.1, 130);
+    const reach = Math.min(W * 0.11, 150);
 
     const sections = Array.from(document.querySelectorAll("main > section"));
     sections.forEach((sec, idx) => {
       const yc = sec.offsetTop + Math.min(sec.offsetHeight * 0.42, 200);
       const sx = vineX(yc, W);
-      // a tendril reaching from the stem toward the content
       const tx = sx + reach, ty = yc - 26;
       addTwig(sx, yc, tx, ty);
-      addLeaf(tx, ty, angAt(yc) + 42, 26, "leaf");
-      // flowers bloom on alternating section nodes
-      if (idx % 2 === 0) addFlower(tx + 12, ty - 22, 15);
-      else addLeaf(sx + 26, yc + 38, angAt(yc) - 58, 20, "leaf");
-      // a leaf hugging the stem opposite the tendril
-      addLeaf(sx, yc - 64, angAt(yc) - 120, 18, "leaf");
+      addLeaf(tx, ty, angAt(yc) + 42, 28, "leaf");
+      if (idx % 2 === 0) addFlower(tx + 12, ty - 22, 16);
+      else addLeaf(sx + 26, yc + 38, angAt(yc) - 58, 21, "leaf");
+      addLeaf(sx, yc - 64, angAt(yc) - 120, 19, "leaf");
     });
 
     // hero flourish — a lush cluster near the top-left corner
     const hx = vineX(150, W);
     addTwig(hx, 180, hx + reach * 1.2, 96);
-    addFlower(hx + reach * 1.2, 80, 21);
-    addLeaf(hx + reach * 0.6, 150, 34, 32, "leaf");
-    addLeaf(hx - 6, 96, -44, 26, "leaf");
+    addFlower(hx + reach * 1.2, 80, 22);
+    addLeaf(hx + reach * 0.6, 150, 34, 34, "leaf");
+    addLeaf(hx - 6, 96, -44, 27, "leaf");
 
-    // scattered buds along the stem
     for (let y = 240; y < H - 160; y += 300) addLeaf(vineX(y, W), y, 0, 12, "bud");
 
-    vineLen = vinePath.getTotalLength();
-    vinePath.style.strokeDasharray = vineLen;
-    vineGlow.style.strokeDasharray = vineLen;
+    vineReady = true;
   }
 
+  // reveal the branch top-down via the clip rect; `grow` eases the intro
+  let grow = 0;
   function drawVine() {
-    if (!vineLen) return;
-    const H = document.documentElement.scrollHeight;
-    const progress = Math.max(0, Math.min(1, (window.scrollY + vh2 * 0.92) / H));
-    const offset = vineLen * (1 - progress);
-    vinePath.style.strokeDashoffset = offset;
-    vineGlow.style.strokeDashoffset = offset;
-    const drawnY = progress * H;
+    if (!vineReady) return;
+    const p = Math.max(0, Math.min(1, (window.scrollY + vh2 * 0.92) / docH));
+    const revealed = p * docH * grow;
+    if (vineClipRect) vineClipRect.setAttribute("height", revealed.toFixed(1));
     for (let i = 0; i < leafEls.length; i++) {
-      leafEls[i].el.classList.toggle("bloom", leafEls[i].y <= drawnY);
+      leafEls[i].el.classList.toggle("bloom", leafEls[i].y <= revealed);
     }
   }
 
   buildVine();
 
   if (prefersReduced) {
-    if (vinePath) { vinePath.style.strokeDashoffset = 0; vineGlow.style.strokeDashoffset = 0; }
+    grow = 1;
+    if (vineClipRect) vineClipRect.setAttribute("height", docH);
     leafEls.forEach((l) => l.el.classList.add("bloom"));
     return; // skip motion-heavy work
   }
 
-  // hero flourish: animate the branch growing in on load, then hand off to scroll
-  const GROW = "stroke-dashoffset 1.9s cubic-bezier(0.22,1,0.36,1)";
-  vinePath.style.transition = GROW;
-  vineGlow.style.transition = GROW;
-  vinePath.style.strokeDashoffset = vineLen;
-  vineGlow.style.strokeDashoffset = vineLen;
-  requestAnimationFrame(() => requestAnimationFrame(drawVine));
-  setTimeout(() => { vinePath.style.transition = ""; vineGlow.style.transition = ""; }, 2000);
+  // FALLING PETALS — drifting free of the branch
+  const petalfall = document.getElementById("petalfall");
+  if (petalfall) {
+    const tones = ["#cf9a72", "#d98a86", "#9bb094", "#c4b07a"];
+    const n = window.innerWidth < 600 ? 9 : 18;
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement("span");
+      s.className = "petal-fall";
+      const size = 6 + Math.random() * 9;
+      s.style.left = (Math.random() * 100).toFixed(1) + "%";
+      s.style.width = size.toFixed(1) + "px";
+      s.style.height = (size * 1.25).toFixed(1) + "px";
+      s.style.background = tones[i % tones.length];
+      s.style.animationDuration = (10 + Math.random() * 11).toFixed(1) + "s";
+      s.style.animationDelay = (-Math.random() * 20).toFixed(1) + "s";
+      petalfall.appendChild(s);
+    }
+  }
+
+  // fluid grow-in flourish on load, then hand off to scroll
+  const easeOut = (k) => 1 - Math.pow(1 - k, 3);
+  let introStart = 0;
+  function introLoop(now) {
+    if (!introStart) introStart = now;
+    grow = easeOut(Math.min(1, (now - introStart) / 2000));
+    drawVine();
+    if (grow < 1) requestAnimationFrame(introLoop);
+  }
+  requestAnimationFrame(introLoop);
 
   let vineTick = false;
   const onVineScroll = () => {
@@ -546,17 +583,35 @@
   // sections that get scroll-linked depth ("coming out of the screen")
   const depthSecs = Array.from(document.querySelectorAll("main > section"));
 
+  /* ---------- INTENSE MULTI-LAYER PARALLAX ----------
+     Decorative, non-reveal/non-tilt elements drift vertically at different
+     speeds relative to the viewport, so the whole page reads with depth.    */
+  const pxItems = [];
+  const regPx = (sel, speed) =>
+    document.querySelectorAll(sel).forEach((el) => pxItems.push({ el, speed }));
+  regPx(".section-head .eyebrow", 0.10);
+  regPx(".section-head h2", 0.16);
+  regPx(".section-head p", 0.08);
+  regPx(".lottie-accent", 0.22);
+  regPx(".day__index", 0.34);
+  regPx(".card__n", 0.14);
+  regPx(".phase__n", 0.20);
+  regPx(".ripple-step__n", 0.18);
+  regPx(".hero__title", 0.14);
+  regPx(".hero__sub", 0.09);
+  regPx(".badge", 0.18);
+
   function updateTargets() {
     const p = scrollY / vh; // pages scrolled
     // Intensified ~2x: pointer drives stronger rotation + lateral slide;
     // scroll glides the camera much further forward and downward, and adds
     // a slow roll so the whole atmosphere feels alive.
-    tgt.ry = pointerX * 13;                 // deg
-    tgt.rx = -pointerY * 9;                  // deg
-    tgt.rz = Math.sin(p * 0.6) * 2.2;        // subtle roll with scroll
-    tgt.tx = pointerX * -72;                 // px
-    tgt.ty = scrollY * 0.2 - pointerY * 44;
-    tgt.tz = Math.min(p * 260, 620);         // ease forward, capped
+    tgt.ry = pointerX * 16;                  // deg
+    tgt.rx = -pointerY * 11;                 // deg
+    tgt.rz = Math.sin(p * 0.6) * 3;          // roll with scroll
+    tgt.tx = pointerX * -92;                 // px
+    tgt.ty = scrollY * 0.28 - pointerY * 54;
+    tgt.tz = Math.min(p * 340, 780);         // ease forward, capped
   }
 
   function loop(now) {
@@ -590,13 +645,22 @@
     for (let i = 0; i < depthSecs.length; i++) {
       const sec = depthSecs[i];
       const r = sec.getBoundingClientRect();
-      if (r.bottom < -200 || r.top > vh + 200) continue; // skip off-screen
+      if (r.bottom < -300 || r.top > vh + 300) continue; // skip off-screen
       let dd = (r.top + r.height / 2 - vh / 2) / vh;
-      dd = Math.max(-1.4, Math.min(1.4, dd));
-      const tz = -dd * 150;
-      const op = dd < -0.55 ? Math.max(0.2, 1 - (-dd - 0.55) * 1.25) : 1;
+      dd = Math.max(-1.5, Math.min(1.5, dd));
+      const tz = -dd * 320;                 // intensified depth
+      const op = dd < -0.5 ? Math.max(0.15, 1 - (-dd - 0.5) * 1.2) : 1;
       sec.style.transform = `translateZ(${tz.toFixed(1)}px)`;
       sec.style.opacity = op.toFixed(3);
+    }
+
+    // multi-layer element parallax
+    for (let i = 0; i < pxItems.length; i++) {
+      const it = pxItems[i];
+      const r = it.el.getBoundingClientRect();
+      if (r.bottom < -200 || r.top > vh + 200) continue;
+      const off = (r.top + r.height / 2) - vh / 2;
+      it.el.style.transform = `translate3d(0, ${(-off * it.speed).toFixed(1)}px, 0)`;
     }
 
     requestAnimationFrame(loop); // motes drift continuously, so always loop

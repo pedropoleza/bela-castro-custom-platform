@@ -1,37 +1,52 @@
 /* ============================================================
    ISABELA WEEKLY MESSAGE HUB — internal dashboard
    ============================================================ */
+/* default theme = GoHighLevel style (white background, blue layout) */
 :root {
   --font: "Manrope", system-ui, sans-serif;
   --display: "Fraunces", Georgia, serif;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --bg: #080808;
-  --card: #111111;
-  --card-2: #181818;
-  --text: #f7f2ec;
-  --muted: #9c938a;
-  --accent: #d8a66b;
-  --accent-2: #b97858;
-  --line: rgba(247, 242, 236, 0.10);
-  --line-2: rgba(247, 242, 236, 0.06);
-  --good: #6fbf8b;
-  --warn: #e0b15e;
-  --bad: #d77a6b;
-  --shadow: 0 24px 60px -32px rgba(0, 0, 0, 0.8);
-  --radius: 16px;
-}
-[data-theme="light"] {
-  --bg: #f8f3ed;
+  --bg: #eef1f6;
   --card: #ffffff;
-  --card-2: #f1e9df;
-  --text: #211b17;
-  --muted: #766b63;
-  --accent: #b97858;
-  --accent-2: #d8a66b;
-  --line: rgba(33, 27, 23, 0.12);
-  --line-2: rgba(33, 27, 23, 0.06);
-  --shadow: 0 24px 60px -36px rgba(120, 90, 60, 0.4);
+  --card-2: #f3f6fb;
+  --text: #1b2738;
+  --muted: #6c7a90;
+  --accent: #2a8bf2;
+  --accent-2: #1f6fd0;
+  --line: rgba(27, 39, 56, 0.10);
+  --line-2: rgba(27, 39, 56, 0.05);
+  --good: #2bb673;
+  --warn: #e0a23b;
+  --bad: #e0584b;
+  --shadow: 0 18px 44px -28px rgba(30, 55, 100, 0.35);
+  --radius: 14px;
+  --on-accent: #ffffff;
+
+  /* blue/navy sidebar like GoHighLevel */
+  --sidebar-bg: linear-gradient(180deg, #1f3a63 0%, #15294a 100%);
+  --sidebar-text: #aebfd6;
+  --sidebar-active-bg: rgba(42, 139, 242, 0.26);
+  --sidebar-active-text: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+}
+[data-theme="dark"] {
+  --bg: #0e1726;
+  --card: #16223a;
+  --card-2: #1c2b46;
+  --text: #e8eef7;
+  --muted: #93a1b8;
+  --accent: #3a9bff;
+  --accent-2: #2a7fe0;
+  --line: rgba(255, 255, 255, 0.10);
+  --line-2: rgba(255, 255, 255, 0.05);
+  --shadow: 0 24px 60px -32px rgba(0, 0, 0, 0.7);
+  --on-accent: #06101f;
+  --sidebar-bg: linear-gradient(180deg, #13203a 0%, #0b1424 100%);
+  --sidebar-text: #9fb0cc;
+  --sidebar-active-bg: rgba(58, 155, 255, 0.24);
+  --sidebar-active-text: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -64,8 +79,8 @@ h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
   flex-direction: column;
   gap: 8px;
   padding: 20px 16px;
-  background: linear-gradient(180deg, var(--card) 0%, var(--bg) 100%);
-  border-right: 1px solid var(--line);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
 }
 .main { min-width: 0; display: flex; flex-direction: column; }
 
@@ -75,29 +90,29 @@ h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
   background: radial-gradient(circle at 35% 30%, var(--accent), var(--accent-2));
   box-shadow: 0 8px 20px -8px var(--accent);
 }
-.brand__text { font-family: var(--display); font-size: 1.15rem; font-weight: 600; display: flex; flex-direction: column; line-height: 1.1; }
-.brand__text small { font-family: var(--font); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.brand__text { font-family: var(--display); font-size: 1.15rem; font-weight: 600; display: flex; flex-direction: column; line-height: 1.1; color: #fff; }
+.brand__text small { font-family: var(--font); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--sidebar-text); font-weight: 600; }
 
 .nav { display: flex; flex-direction: column; gap: 2px; }
 .nav a {
   display: flex; align-items: center; gap: 12px;
-  padding: 11px 12px; border-radius: 11px;
-  color: var(--muted); font-weight: 500; font-size: 0.92rem;
+  padding: 11px 12px; border-radius: 10px;
+  color: var(--sidebar-text); font-weight: 500; font-size: 0.92rem;
   transition: background 0.25s var(--ease), color 0.25s var(--ease);
 }
 .nav a svg { width: 18px; height: 18px; flex: none; }
-.nav a:hover { background: var(--card-2); color: var(--text); }
-.nav a.is-active { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.nav a:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.nav a.is-active { background: var(--sidebar-active-bg); color: var(--sidebar-active-text); box-shadow: inset 3px 0 0 var(--accent); }
 
 .sidebar__foot { margin-top: auto; padding-top: 12px; }
 .theme-toggle {
   width: 100%; display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: 11px;
-  border: 1px solid var(--line); background: var(--card-2);
-  color: var(--muted); cursor: pointer; font-weight: 600; font-size: 0.85rem;
-  transition: border-color 0.25s var(--ease);
+  padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--sidebar-border); background: rgba(255, 255, 255, 0.06);
+  color: var(--sidebar-text); cursor: pointer; font-weight: 600; font-size: 0.85rem;
+  transition: border-color 0.25s var(--ease), background 0.25s var(--ease);
 }
-.theme-toggle:hover { border-color: var(--accent); }
+.theme-toggle:hover { border-color: var(--accent); background: rgba(255, 255, 255, 0.1); }
 .theme-toggle__dot { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); }
 
 /* ---------- topbar ---------- */
@@ -114,7 +129,7 @@ h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
 .menu-btn { display: none; background: none; border: none; color: var(--text); font-size: 1.3rem; cursor: pointer; }
 .avatar {
   width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #1a1206;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--on-accent);
   font-weight: 700; font-size: 0.8rem;
 }
 
@@ -169,7 +184,7 @@ h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
 }
 .btn svg { width: 16px; height: 16px; }
 .btn:active { transform: translateY(1px); }
-.btn--primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #1a1206; }
+.btn--primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--on-accent); }
 .btn--primary:hover { filter: brightness(1.05); }
 .btn--ghost { background: transparent; border-color: var(--line); color: var(--text); }
 .btn--ghost:hover { border-color: var(--accent); color: var(--accent); }

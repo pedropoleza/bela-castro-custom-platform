@@ -648,14 +648,18 @@ section[id] { scroll-margin-top: 86px; }
   margin: 0 auto;
   padding: 20px 24px;
 }
-/* the trail line */
+/* the trail spine — a wooden post the main vine couples onto */
 .trail::before {
   content: "";
   position: absolute;
-  left: 50%; top: 0; bottom: 0;
-  width: 2px;
+  left: 50%; top: 8px; bottom: 8px;
+  width: 7px;
   transform: translateX(-50%);
-  background: linear-gradient(180deg, transparent, var(--line) 8%, var(--line) 92%, transparent);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(180deg, rgba(0,0,0,0.07) 0 5px, rgba(255,255,255,0.04) 5px 12px),
+    linear-gradient(90deg, #5c4329 0%, #8a6843 45%, #6b4f34 100%);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.18), inset -1.5px 0 2px rgba(0,0,0,0.3), inset 1.5px 0 1px rgba(255,255,255,0.14);
 }
 /* a progress line that fills as you climb through the days */
 .trail__progress {

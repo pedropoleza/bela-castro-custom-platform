@@ -487,6 +487,8 @@
   let vineReady = false;
   let docH = 1;
   let vh2 = window.innerHeight;
+  let flowTop = 0, flowBot = 0;   // the weekly-trail band the vine couples to
+  const smoothstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
   // the branch wanders freely across the page — drifting through the center
   // and toward either side at different points, organic rather than fixed
@@ -494,7 +496,18 @@
     const swing = Math.sin(y * 0.0011 + 4.4) * (W * 0.30);   // slow wide sweep L<->R through center
     const swing2 = Math.sin(y * 0.0037 + 0.7) * (W * 0.08);  // secondary undulation
     const weave = Math.sin(y * 0.013) * (W * 0.018);         // fine organic weave
-    return W * 0.5 + swing + swing2 + weave;
+    let x = W * 0.5 + swing + swing2 + weave;
+    // within the weekly trail, couple onto the central (wooden) bar: ease in,
+    // wrap it as it descends, then ease back out to the free wander
+    if (flowBot > flowTop) {
+      const pad = 200;
+      const couple = Math.min(
+        smoothstep(flowTop - pad, flowTop + pad, y),
+        1 - smoothstep(flowBot - pad, flowBot + pad, y)
+      );
+      x += (W * 0.5 - x) * Math.max(0, couple);
+    }
+    return x;
   };
 
   function addNode(cx, cy) {
@@ -614,6 +627,8 @@
     const W = document.documentElement.clientWidth;
     const H = document.documentElement.scrollHeight;
     docH = H;
+    const flowSec = document.getElementById("flow");
+    if (flowSec) { flowTop = flowSec.offsetTop; flowBot = flowSec.offsetTop + flowSec.offsetHeight; }
     vineSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     vineSvg.setAttribute("width", W);
     vineSvg.setAttribute("height", H);

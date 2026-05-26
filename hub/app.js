@@ -1015,7 +1015,9 @@ function render() {
   const { route, params } = parseHash();
   $("#modalRoot").innerHTML = "";
   const view = screens[route] || screens.dashboard;
-  $("#screen").innerHTML = view(params);
+  const sc = $("#screen");
+  sc.innerHTML = view(params);
+  sc.style.animation = "none"; void sc.offsetWidth; sc.style.animation = ""; // replay fade on content swap
   $("#nav").innerHTML = NAV().map((n) => `<a href="#/${n.id}" data-route="${n.id}" class="${n.id === route ? "is-active" : ""}">${n.ic}<span>${n.label}</span></a>`).join("");
   $("#langToggle") && $("#langToggle").querySelectorAll("[data-l]").forEach((s) => s.classList.toggle("on", s.dataset.l === LANG));
   window.scrollTo(0, 0);

@@ -303,6 +303,23 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.84rem; white-sp
   .cal { grid-template-columns: 1fr; }
   .filter-row { grid-template-columns: 1fr; }
 }
+/* ---------- fluid microinteractions ---------- */
+@keyframes hub-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hub-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.screen { animation: hub-fade 0.22s var(--ease); }
+.daypanel { animation: hub-rise 0.34s var(--ease) both; }
+/* gentle lift on interactive cards */
+.sched__day, .ministat, .dash-info .card, .list-item {
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
+}
+.sched__day:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -14px rgba(30, 55, 100, 0.4); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.ministat:hover, .dash-info .card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -16px rgba(30, 55, 100, 0.35); }
+.preset, .btn, .topnav a, .pill { transition: transform 0.2s var(--ease), background 0.2s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease), box-shadow 0.2s var(--ease); }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+/* smooth details (advanced filters / edit) open */
+details.advanced > summary { transition: color 0.2s var(--ease); }
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }

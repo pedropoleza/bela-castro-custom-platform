@@ -395,6 +395,8 @@
   const vineClipRect = document.getElementById("vineClipRect");
   const leavesG = document.getElementById("vineLeaves");
   const leafEls = [];
+  const stationGroups = [];   // flourish elements per section, bloomed on arrival
+  let groupTarget = null;     // when set, new elements go here instead of leafEls
   let vineReady = false;
   let docH = 1;
   let vh2 = window.innerHeight;
@@ -405,7 +407,7 @@
   const vineX = (y, W) => {
     const H = docH || 1;
     const t = y / H;
-    const cross = smooth(0.40, 0.60, t);            // 0 = left (top), 1 = right (bottom)
+    const cross = smooth(0.47, 0.55, t);            // narrow band = a horizontal sweep across
     const base = W * 0.12 + (W * 0.76) * cross;
     const weave = Math.sin(y * 0.0052) * (W * 0.03) + Math.sin(y * 0.012) * (W * 0.014);
     return base + weave;
@@ -416,7 +418,7 @@
     c.setAttribute("cx", cx.toFixed(1)); c.setAttribute("cy", cy.toFixed(1));
     c.setAttribute("r", "6.5"); c.setAttribute("class", "vine__node");
     leavesG.appendChild(c);
-    leafEls.push({ y: cy, el: c });
+    (groupTarget || leafEls).push({ y: cy, el: c });
   }
 
   function addLeaf(cx, cy, angleDeg, size, kind) {
@@ -441,12 +443,12 @@
       vein.setAttribute("class", "vine__vein");
       g.appendChild(vein);
       leavesG.appendChild(g);
-      leafEls.push({ y: cy, el: shape });
+      (groupTarget || leafEls).push({ y: cy, el: shape });
       return;
     }
     g.appendChild(shape);
     leavesG.appendChild(g);
-    leafEls.push({ y: cy, el: shape });
+    (groupTarget || leafEls).push({ y: cy, el: shape });
   }
 
   function addTwig(x1, y1, x2, y2) {
@@ -455,7 +457,7 @@
     p.setAttribute("d", `M${x1.toFixed(1)} ${y1.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`);
     p.setAttribute("class", "vine__twig");
     leavesG.appendChild(p);
-    leafEls.push({ y: Math.min(y1, y2), el: p });
+    (groupTarget || leafEls).push({ y: Math.min(y1, y2), el: p });
   }
 
   // a single soft, pointed petal (lanceolate) from the center outward
@@ -499,7 +501,7 @@
       g.appendChild(sd);
     }
     leavesG.appendChild(g);
-    leafEls.push({ y: cy, el: g });
+    (groupTarget || leafEls).push({ y: cy, el: g });
   }
 
   // build a filled, tapering outline from any centerline function cxFn(y)
@@ -545,6 +547,7 @@
 
     leavesG.innerHTML = "";
     leafEls.length = 0;
+    stationGroups.length = 0;
     const slope = (y) => (vineX(y + 1, W) - vineX(y - 1, W)) / 2;
     const angAt = (y) => Math.atan(slope(y)) * 180 / Math.PI;
     const reach = Math.min(W * 0.11, 150);
@@ -557,6 +560,10 @@
       const dir = onLeft ? 1 : -1;            // tendrils always reach inward
       const tx = sx + reach * dir, ty = yc - 26;
       const base = angAt(yc);
+
+      const grp = [];
+      groupTarget = grp;                        // this station's flourish blooms on arrival
+      stationGroups[idx] = grp;
 
       addNode(sx, yc);                          // each section is a "station"
 
@@ -581,6 +588,7 @@
         addLeaf(tx, ty, base + dir * 40, 26, "leaf");
         addLeaf(sx, yc - 50, base - dir * 110, 18, "leaf");
       }
+      groupTarget = null;
     });
 
     // hero flourish — a lush cluster near the top-left corner
@@ -613,7 +621,25 @@
     grow = 1;
     if (vineClipRect) vineClipRect.setAttribute("height", docH);
     leafEls.forEach((l) => l.el.classList.add("bloom"));
+    stationGroups.forEach((g) => g.forEach((o) => o.el.classList.add("bloom")));
     return; // skip motion-heavy work
+  }
+
+  /* ---------- STATION FLOWERS — bloom when you arrive at each section ---------- */
+  if ("IntersectionObserver" in window) {
+    const secList = Array.from(document.querySelectorAll("main > section"));
+    const idxOf = new Map(secList.map((s, i) => [s, i]));
+    const stationIO = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        const grp = stationGroups[idxOf.get(e.target)];
+        if (grp) grp.forEach((o, i) => setTimeout(() => o.el.classList.add("bloom"), i * 90));
+        stationIO.unobserve(e.target);
+      });
+    }, { threshold: 0.18, rootMargin: "0px 0px -12% 0px" });
+    secList.forEach((s) => stationIO.observe(s));
+  } else {
+    stationGroups.forEach((g) => g.forEach((o) => o.el.classList.add("bloom")));
   }
 
   // FALLING PETALS — drifting free of the branch
@@ -650,10 +676,19 @@
   const onVineScroll = () => {
     if (!vineTick) { vineTick = true; requestAnimationFrame(() => { drawVine(); vineTick = false; }); }
   };
+  // after a rebuild, re-bloom stations the reader has already reached
+  const refreshStations = () => {
+    const secList = Array.from(document.querySelectorAll("main > section"));
+    secList.forEach((s, i) => {
+      if (s.getBoundingClientRect().top < window.innerHeight * 0.82) {
+        (stationGroups[i] || []).forEach((o) => o.el.classList.add("bloom"));
+      }
+    });
+  };
   window.addEventListener("scroll", onVineScroll, { passive: true });
-  window.addEventListener("resize", () => { vh2 = window.innerHeight; buildVine(); drawVine(); });
-  window.addEventListener("load", () => { buildVine(); drawVine(); });
-  setTimeout(() => { buildVine(); drawVine(); }, 700);
+  window.addEventListener("resize", () => { vh2 = window.innerHeight; buildVine(); drawVine(); refreshStations(); });
+  window.addEventListener("load", () => { buildVine(); drawVine(); refreshStations(); });
+  setTimeout(() => { buildVine(); drawVine(); refreshStations(); }, 700);
 
   const fine = window.matchMedia("(pointer: fine)").matches;
   const PERSPECTIVE = 1200; // must match .scene { perspective }

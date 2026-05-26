@@ -23,6 +23,7 @@
 
   --text: #2a2f25;
   --text-dim: #5f6555;
+  --text-soft: #474d3d;
   --line: rgba(42, 47, 37, 0.14);
 
   --forest: #3a4a36;
@@ -55,6 +56,7 @@
 
   --text: #ece8dc;
   --text-dim: #99a191;
+  --text-soft: #c7cdb9;
   --line: rgba(236, 232, 220, 0.12);
 
   --forest: #c2cdb6;
@@ -475,7 +477,7 @@ main { position: relative; z-index: 1; }
 section { position: relative; }
 section[id] { scroll-margin-top: 86px; }
 
-.section-head { max-width: 720px; margin: 0 auto 42px; text-align: center; padding: 0 24px; }
+.section-head { max-width: 700px; margin: 0 auto 28px; text-align: center; padding: 0 24px; }
 .lottie-accent {
   display: block;
   width: 76px; height: 76px;
@@ -495,13 +497,13 @@ section[id] { scroll-margin-top: 86px; }
 .section-head h2, .summit h2 {
   font-family: var(--font-display);
   font-weight: 600;
-  line-height: 1.04;
+  line-height: 1.06;
   letter-spacing: -0.018em;
-  margin: 18px 0 20px;
-  font-size: clamp(2.4rem, 5.6vw, 4.2rem);
+  margin: 12px 0 14px;
+  font-size: clamp(1.9rem, 3.6vw, 3rem);
 }
 .section-head h2 em, .summit h2 em { font-style: italic; color: var(--clay); }
-.section-head p { color: var(--text-dim); font-size: clamp(1.02rem, 1.4vw, 1.15rem); line-height: 1.65; }
+.section-head p { color: var(--text-soft); font-size: clamp(0.96rem, 1.1vw, 1.05rem); line-height: 1.6; }
 
 /* Buttons */
 .btn {
@@ -612,7 +614,7 @@ section[id] { scroll-margin-top: 86px; }
 /* ============================================================
    WEEKLY FLOW — THE TRAIL
    ============================================================ */
-.flow { padding: 48px 0 58px; }
+.flow { padding: 40px 0 42px; }
 .trail {
   position: relative;
   max-width: var(--maxw);
@@ -631,7 +633,7 @@ section[id] { scroll-margin-top: 86px; }
 .day {
   position: relative;
   width: calc(50% - 48px);
-  margin: 0 0 46px auto;
+  margin: 0 0 24px auto;
   margin-right: 0; margin-left: auto;
 }
 .day:not(.day--right) { margin-left: 0; }
@@ -654,7 +656,7 @@ section[id] { scroll-margin-top: 86px; }
   position: absolute;
   top: 6px;
   font-family: var(--font-display);
-  font-size: 3.4rem;
+  font-size: 2.2rem;
   font-weight: 500;
   color: var(--accent);
   opacity: 0.28;
@@ -666,8 +668,8 @@ section[id] { scroll-margin-top: 86px; }
 .day__card {
   background: var(--card-bg);
   border: 1px solid var(--card-brd);
-  border-radius: 20px;
-  padding: 30px 30px 32px;
+  border-radius: 18px;
+  padding: 20px 22px 22px;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: var(--card-shadow);
@@ -676,37 +678,37 @@ section[id] { scroll-margin-top: 86px; }
 }
 .day__name {
   font-family: var(--font-display);
-  font-size: 1.9rem; font-weight: 600;
+  font-size: 1.42rem; font-weight: 600;
   display: block;
 }
 .day__theme {
   display: inline-block;
-  margin: 4px 0 14px;
-  font-size: 0.78rem; letter-spacing: 0.16em; text-transform: uppercase;
+  margin: 3px 0 9px;
+  font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase;
   color: var(--accent); font-weight: 600;
 }
-.day__lead { font-style: italic; font-family: var(--font-display); font-size: 1.25rem; color: var(--text); margin-bottom: 14px; }
-.day__obj { color: var(--text-dim); font-size: 0.96rem; margin-bottom: 16px; }
+.day__lead { font-style: italic; font-family: var(--font-display); font-size: 1.05rem; color: var(--text); margin-bottom: 9px; }
+.day__obj { color: var(--text-soft); font-size: 0.86rem; margin-bottom: 10px; line-height: 1.5; }
 .day__obj strong { color: var(--text); }
 .day__nomsg {
-  font-size: 0.85rem; letter-spacing: 0.04em;
+  font-size: 0.82rem; letter-spacing: 0.04em;
   color: var(--sage); font-weight: 600;
-  margin-bottom: 14px;
+  margin-bottom: 9px;
 }
 .day__ideas {
-  display: flex; flex-wrap: wrap; gap: 8px;
-  margin-bottom: 18px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 11px;
 }
 .day__ideas li {
-  font-size: 0.8rem;
-  padding: 6px 12px;
+  font-size: 0.72rem;
+  padding: 4px 10px;
   border-radius: 100px;
   border: 1px solid var(--line);
-  color: var(--text-dim);
+  color: var(--text-soft);
 }
 .day__goal {
-  font-size: 0.92rem;
-  padding-top: 14px;
+  font-size: 0.84rem;
+  padding-top: 10px;
   border-top: 1px solid var(--line);
   color: var(--text);
 }
@@ -726,14 +728,14 @@ section[id] { scroll-margin-top: 86px; }
    GENERIC SECTIONS + CARD GRID
    (vision · problem · ecosystem · membership · feel)
    ============================================================ */
-.vision, .problem, .ecosystem, .membership, .feel { padding: 58px 0 58px; }
+.vision, .problem, .ecosystem, .membership, .feel { padding: 42px 0 42px; }
 
 .cards {
   max-width: var(--maxw);
   margin: 0 auto;
   padding: 0 24px;
   display: grid;
-  gap: 22px;
+  gap: 16px;
 }
 .cards--3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 .cards--4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
@@ -742,8 +744,8 @@ section[id] { scroll-margin-top: 86px; }
   position: relative;
   background: var(--card-bg);
   border: 1px solid var(--card-brd);
-  border-radius: 20px;
-  padding: 30px 28px 28px;
+  border-radius: 18px;
+  padding: 22px 22px 22px;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: var(--card-shadow);
@@ -769,8 +771,8 @@ section[id] { scroll-margin-top: 86px; }
 .card--media { padding-top: 0; }
 .card__media {
   position: relative;
-  margin: -1px -28px 22px;
-  aspect-ratio: 16 / 10;
+  margin: -1px -22px 16px;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
 }
 .card__media img {
@@ -791,14 +793,14 @@ section[id] { scroll-margin-top: 86px; }
 }
 .card__n {
   display: inline-grid; place-items: center;
-  width: 44px; height: 44px; margin-bottom: 16px;
+  width: 36px; height: 36px; margin-bottom: 11px;
   border-radius: 50%;
   border: 1px solid color-mix(in srgb, var(--card-accent, var(--accent)) 55%, transparent);
   font-family: var(--font-display);
-  font-size: 1.15rem; color: var(--card-accent, var(--accent)); font-weight: 600;
+  font-size: 0.95rem; color: var(--card-accent, var(--accent)); font-weight: 600;
 }
-.card h3 { font-family: var(--font-display); font-size: 1.55rem; font-weight: 600; margin-bottom: 10px; line-height: 1.1; }
-.card p { color: var(--text-dim); font-size: 0.96rem; line-height: 1.6; }
+.card h3 { font-family: var(--font-display); font-size: 1.28rem; font-weight: 600; margin-bottom: 7px; line-height: 1.12; }
+.card p { color: var(--text-soft); font-size: 0.9rem; line-height: 1.55; }
 .card--quiet { background: color-mix(in srgb, var(--card-bg) 72%, transparent); }
 .card--quiet h3 { color: var(--clay); }
 
@@ -806,13 +808,13 @@ section[id] { scroll-margin-top: 86px; }
 .membership .cards {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  grid-auto-rows: 250px;
-  gap: 16px;
+  grid-auto-rows: 172px;
+  gap: 14px;
 }
 .membership .card { display: flex; flex-direction: column; }
-.membership .card .card__media { aspect-ratio: auto; flex: 1 1 auto; min-height: 92px; margin: -1px -28px 16px; }
+.membership .card .card__media { aspect-ratio: auto; flex: 1 1 auto; min-height: 70px; margin: -1px -22px 12px; }
 .membership .card:nth-child(1) { grid-column: 1 / 4; grid-row: 1 / 3; }
-.membership .card:nth-child(1) h3 { font-size: 2rem; }
+.membership .card:nth-child(1) h3 { font-size: 1.6rem; }
 .membership .card:nth-child(2) { grid-column: 4 / 7; grid-row: 1 / 2; }
 .membership .card:nth-child(3) { grid-column: 4 / 7; grid-row: 2 / 3; }
 .membership .card:nth-child(4) { grid-column: 1 / 3; grid-row: 3 / 4; }
@@ -826,12 +828,12 @@ section[id] { scroll-margin-top: 86px; }
 
 /* keep the weekly chips scannable — show the essential few */
 .day__ideas li:nth-child(n+5) { display: none; }
-.card--list ul { margin-top: 6px; display: flex; flex-direction: column; gap: 10px; }
+.card--list ul { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
 .card--list li {
   position: relative;
-  padding-left: 22px;
-  color: var(--text-dim);
-  font-size: 0.95rem;
+  padding-left: 20px;
+  color: var(--text-soft);
+  font-size: 0.9rem;
 }
 .card--list li::before {
   content: ""; position: absolute; left: 0; top: 0.55em;
@@ -842,7 +844,7 @@ section[id] { scroll-margin-top: 86px; }
 /* ============================================================
    THE 4 PHASES — vertical depth progression
    ============================================================ */
-.phases { padding: 58px 0 58px; }
+.phases { padding: 42px 0 42px; }
 .phase-track {
   position: relative;
   max-width: 860px;
@@ -850,7 +852,7 @@ section[id] { scroll-margin-top: 86px; }
   padding: 0 24px;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 16px;
 }
 .phase-track::before {
   content: "";
@@ -883,20 +885,20 @@ section[id] { scroll-margin-top: 86px; }
 .phase__body {
   background: var(--card-bg);
   border: 1px solid var(--card-brd);
-  border-radius: 18px;
-  padding: 24px 26px;
+  border-radius: 16px;
+  padding: 16px 20px;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: var(--card-shadow);
   transform-style: preserve-3d;
 }
-.phase__body h3 { font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; margin-bottom: 8px; }
-.phase__body p { color: var(--text-dim); font-size: 0.96rem; }
+.phase__body h3 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; margin-bottom: 5px; }
+.phase__body p { color: var(--text-soft); font-size: 0.9rem; line-height: 1.5; }
 
 /* ============================================================
    RIPPLE — empowered women change generations
    ============================================================ */
-.ripple { padding: 58px 0 58px; }
+.ripple { padding: 42px 0 42px; }
 .ripple-track {
   max-width: var(--maxw);
   margin: 0 auto;
@@ -908,18 +910,18 @@ section[id] { scroll-margin-top: 86px; }
 .ripple-step {
   position: relative;
   text-align: center;
-  padding: 30px 22px;
+  padding: 18px 18px;
 }
 .ripple-step__n {
   display: grid; place-items: center;
-  width: 52px; height: 52px; margin: 0 auto 16px;
+  width: 44px; height: 44px; margin: 0 auto 11px;
   border-radius: 50%;
   border: 1px solid var(--accent);
   color: var(--accent);
-  font-family: var(--font-display); font-size: 1.3rem; font-weight: 600;
+  font-family: var(--font-display); font-size: 1.1rem; font-weight: 600;
 }
-.ripple-step h3 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; margin-bottom: 8px; }
-.ripple-step p { color: var(--text-dim); font-size: 0.92rem; }
+.ripple-step h3 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; margin-bottom: 5px; }
+.ripple-step p { color: var(--text-soft); font-size: 0.88rem; line-height: 1.5; }
 
 /* ============================================================
    SUMMIT / FINAL CTA

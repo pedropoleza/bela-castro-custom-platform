@@ -478,12 +478,31 @@ section { position: relative; }
 section[id] { scroll-margin-top: 86px; }
 
 .section-head { max-width: 700px; margin: 0 auto 28px; text-align: center; padding: 0 24px; }
-.lottie-accent {
-  display: block;
-  width: 76px; height: 76px;
-  margin: 0 auto 10px;
+
+/* botanical section marker — a little sprig that grows in to demarcate sections */
+.leaf-mark { display: block; width: 60px; height: 56px; margin: 0 auto 12px; overflow: visible; }
+.leaf-mark .lm-stem {
+  fill: none; stroke: var(--vine); stroke-width: 2.4; stroke-linecap: round;
+  stroke-dasharray: 70; stroke-dashoffset: 70;
+  transition: stroke-dashoffset 1s var(--ease) 0.05s;
 }
-.lottie-accent--lg { width: 104px; height: 104px; margin-bottom: 6px; }
+.leaf-mark .lm-leaf {
+  fill: url(#leafGrad);
+  opacity: 0; scale: 0;
+  transform-box: fill-box; transform-origin: 50% 100%;
+  transition: opacity 0.5s var(--ease), scale 0.6s var(--ease);
+  transition-delay: calc(0.2s + var(--d, 0) * 0.1s);
+}
+.leaf-mark .lm-bud {
+  fill: #d8a99d;
+  opacity: 0; scale: 0;
+  transform-box: fill-box; transform-origin: center;
+  transition: opacity 0.5s var(--ease) 0.7s, scale 0.6s var(--ease) 0.7s;
+}
+.section-head.is-visible .lm-stem { stroke-dashoffset: 0; }
+.section-head.is-visible .lm-leaf { opacity: 0.95; scale: 1; animation: leafSway 6s ease-in-out infinite; animation-delay: 1s; }
+.section-head.is-visible .lm-bud { opacity: 1; scale: 1; }
+
 .eyebrow {
   display: inline-flex; align-items: center; gap: 10px;
   font-size: 0.72rem; letter-spacing: 0.34em; text-transform: uppercase;
@@ -630,6 +649,36 @@ section[id] { scroll-margin-top: 86px; }
   transform: translateX(-50%);
   background: linear-gradient(180deg, transparent, var(--line) 8%, var(--line) 92%, transparent);
 }
+/* a progress line that fills as you climb through the days */
+.trail__progress {
+  position: absolute;
+  left: 50%; top: 0;
+  width: 3px; height: 0;
+  transform: translateX(-50%);
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--sage), var(--accent) 55%, var(--clay));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent);
+  z-index: 0;
+  transition: height 0.18s linear;
+}
+/* a glowing comet at the tip of the progress line */
+.trail__progress::after {
+  content: "";
+  position: absolute; left: 50%; bottom: -5px;
+  width: 12px; height: 12px; border-radius: 50%;
+  transform: translateX(-50%);
+  background: var(--clay);
+  box-shadow: 0 0 16px var(--clay), 0 0 0 5px color-mix(in srgb, var(--clay) 22%, transparent);
+}
+/* day nodes light up as the progress reaches them */
+.day::after { transition: transform 0.4s var(--ease), background 0.4s var(--ease), box-shadow 0.4s var(--ease); }
+.day.is-active::after {
+  transform: scale(1.35);
+  background: var(--clay);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--clay) 24%, transparent), 0 0 18px var(--clay);
+}
+.day__card { transition: box-shadow 0.5s var(--ease), border-color 0.5s var(--ease), transform 0.5s var(--ease); }
+.day.is-active .day__card { border-color: color-mix(in srgb, var(--clay) 55%, var(--card-brd)); }
 .day {
   position: relative;
   width: calc(50% - 48px);
@@ -1084,6 +1133,7 @@ section[id] { scroll-margin-top: 86px; }
    ============================================================ */
 @media (max-width: 820px) {
   .trail::before { left: 22px; }
+  .trail__progress { left: 22px; }
   .day, .day--right { width: 100%; margin: 0 0 48px 0; padding-left: 46px; }
   .day::after, .day:not(.day--right)::after, .day--right::after { left: 16px; right: auto; top: 30px; }
   .day__index { display: none; }

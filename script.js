@@ -338,6 +338,22 @@
     revealEls.forEach((el) => el.classList.add("is-visible"));
   }
 
+  /* ---------- BOTANICAL SECTION MARKERS (sprig) ----------
+     A small sprig grows in above each section heading to demarcate sections,
+     keeping the natural theme. Self-contained SVG — no external assets.      */
+  (function plantSprigs() {
+    const leaf = (x, y, rot, s, d) =>
+      `<g transform="translate(${x} ${y}) rotate(${rot})"><path class="lm-leaf" style="--d:${d}" d="M0 0 C ${s*0.34} ${-s*0.3} ${s*0.18} ${-s*0.82} 0 ${-s} C ${-s*0.18} ${-s*0.82} ${-s*0.34} ${-s*0.3} 0 0 Z"/></g>`;
+    const sprig =
+      `<svg class="leaf-mark" viewBox="0 0 60 56" aria-hidden="true">` +
+      `<path class="lm-stem" d="M30 56 C 30 44 30 30 30 12"/>` +
+      leaf(30, 44, -52, 18, 0) + leaf(30, 44, 52, 18, 0) +
+      leaf(30, 33, -46, 15, 1) + leaf(30, 33, 46, 15, 1) +
+      leaf(30, 23, -40, 12, 2) + leaf(30, 23, 40, 12, 2) +
+      `<circle class="lm-bud" cx="30" cy="11" r="5"/></svg>`;
+    document.querySelectorAll(".section-head").forEach((h) => h.insertAdjacentHTML("afterbegin", sprig));
+  })();
+
   /* ---------- FLUID LIGHT BACKGROUND (canvas) ----------
      Soft brand-colored blobs drift on sine paths and blend together — a
      cinematic, video-like flow behind everything. Swap for a real <video>
@@ -638,6 +654,33 @@
   } else {
     stationGroups.forEach((g) => g.forEach((o) => o.el.classList.add("bloom")));
   }
+
+  /* ---------- WEEKLY TRAIL — progress line that fills as you climb ---------- */
+  const trailEl = document.querySelector(".trail");
+  let trailProg = null;
+  let trailDays = [];
+  if (trailEl) {
+    trailProg = document.createElement("span");
+    trailProg.className = "trail__progress";
+    trailEl.appendChild(trailProg);
+    trailDays = Array.from(trailEl.querySelectorAll(".day"));
+  }
+  let trailTick = false;
+  function updateTrail() {
+    if (!trailEl) return;
+    const r = trailEl.getBoundingClientRect();
+    const filled = Math.max(0, Math.min(r.height, vh2 * 0.55 - r.top));
+    trailProg.style.height = filled.toFixed(1) + "px";
+    for (const d of trailDays) {
+      d.classList.toggle("is-active", filled >= d.offsetTop + 40);
+    }
+  }
+  const onTrailScroll = () => {
+    if (!trailTick) { trailTick = true; requestAnimationFrame(() => { updateTrail(); trailTick = false; }); }
+  };
+  window.addEventListener("scroll", onTrailScroll, { passive: true });
+  window.addEventListener("resize", updateTrail);
+  updateTrail();
 
   // FALLING PETALS — drifting free of the branch
   const petalfall = document.getElementById("petalfall");

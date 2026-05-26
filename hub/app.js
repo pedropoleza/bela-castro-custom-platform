@@ -437,8 +437,42 @@ screens.dashboard = () => {
           <button class="btn btn--ghost btn--sm" data-close-day>${t("Fechar", "Close")}</button>
         </div>
         ${dispatchPanels()}
-      </div>` : ""}`;
+      </div>` : dashInfo(today)}`;
 };
+
+// informative lower section of the home (shown when no day panel is open)
+function dashInfo(today) {
+  const ds = state.dayState[today.day];
+  const recent = state.logs.slice(0, 5);
+  const chLabel = state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow";
+  const todayBlock = today.offline
+    ? `<p class="muted">${t("Hoje é dia de descanso (offline) — sem envio.", "Today is an offline rest day — no message.")}</p>`
+    : `<div class="row between" style="margin-bottom:10px"><strong>${dayShort(today.day)} · ${esc(dayTheme(today))}</strong><span class="pill ${statusClass(ds.status)}">${ds.status === "scheduled" ? t("Vai enviar", "Will send") : ds.status}</span></div>
+       <p class="muted mb" style="font-size:.85rem">${t("Horário", "Time")}: ${state.settings.defaultTimes[today.day] || "—"}</p>
+       <button class="btn btn--primary btn--block" data-open-day="${today.day}">${t("Configurar o dia de hoje", "Configure today")}</button>`;
+  return `
+    <div class="dash-info">
+      <div class="card">
+        <div class="panel-title">${t("Hoje", "Today")}</div>
+        ${todayBlock}
+      </div>
+      <div class="card">
+        <div class="panel-title">${t("Atividade recente", "Recent activity")}</div>
+        ${recent.length ? recent.map((l) => `<div class="row between" style="padding:7px 0;border-bottom:1px solid var(--line-2);font-size:.84rem">
+          <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.title)}</span>
+          <span class="pill ${statusClass(l.status)}" style="flex:none">${l.status}</span></div>`).join("") : `<p class="muted">${t("Sem atividade ainda.", "No activity yet.")}</p>`}
+        <a class="btn btn--soft btn--sm mt" href="#/logs">${t("Ver histórico", "View logs")}</a>
+      </div>
+      <div class="card">
+        <div class="panel-title">${t("Automação", "Automation")}</div>
+        <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">${t("Canal", "Channel")}</span><strong>${chLabel}</strong></div>
+        <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">Drip</span><strong>${dripCfg().batch}/${t("lote", "batch")} · ${dripCfg().everySec}s</strong></div>
+        <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">${t("Parar após sem resposta", "Stop after no-reply")}</span><strong>${engCfg().flagAfter}</strong></div>
+        <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">${t("Sem resposta (flag)", "Flagged no-reply")}</span><strong>${nonResponders().length}</strong></div>
+        <a class="btn btn--soft btn--sm mt" href="#/settings">${t("Ajustar automação", "Adjust automation")}</a>
+      </div>
+    </div>`;
+}
 
 function dayCard(d) {
   const ds = state.dayState[d.day];

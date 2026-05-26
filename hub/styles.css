@@ -208,6 +208,10 @@ h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
 
 .drip-note { margin-top: 12px; font-size: 0.78rem; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 8px; padding: 8px 10px; }
 
+/* dashboard lower info section */
+.dash-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 18px; align-items: start; }
+@media (max-width: 900px) { .dash-info { grid-template-columns: 1fr; } }
+
 /* dashboard inline day panel */
 .daypanel { margin-top: 18px; }
 .daypanel__bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }

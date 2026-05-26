@@ -335,6 +335,51 @@
     revealEls.forEach((el) => el.classList.add("is-visible"));
   }
 
+  /* ---------- FLUID LIGHT BACKGROUND (canvas) ----------
+     Soft brand-colored blobs drift on sine paths and blend together — a
+     cinematic, video-like flow behind everything. Swap for a real <video>
+     later by dropping one in and hiding this canvas.                        */
+  let fluidDraw = null;
+  const fluidCanvas = document.getElementById("fluid");
+  if (fluidCanvas && fluidCanvas.getContext) {
+    const fctx = fluidCanvas.getContext("2d");
+    let fw = 1, fh = 1;
+    const sizeFluid = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      fw = fluidCanvas.clientWidth; fh = fluidCanvas.clientHeight;
+      fluidCanvas.width = Math.max(1, fw * dpr);
+      fluidCanvas.height = Math.max(1, fh * dpr);
+      fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    sizeFluid();
+    window.addEventListener("resize", sizeFluid);
+    const blobs = [
+      { c: "214,150,142", r: 0.52, sx: 0.013, sy: 0.011, phx: 0.4, phy: 1.7 },
+      { c: "150,176,150", r: 0.58, sx: 0.010, sy: 0.016, phx: 2.1, phy: 3.4 },
+      { c: "201,168,106", r: 0.62, sx: 0.016, sy: 0.009, phx: 4.0, phy: 0.6 },
+      { c: "176,150,120", r: 0.50, sx: 0.011, sy: 0.014, phx: 5.2, phy: 2.8 },
+      { c: "120,150,120", r: 0.46, sx: 0.015, sy: 0.012, phx: 1.1, phy: 5.0 }
+    ];
+    fluidDraw = (t) => {
+      const dark = root.getAttribute("data-theme") === "dark";
+      const alpha = dark ? 0.5 : 0.34;
+      fctx.clearRect(0, 0, fw, fh);
+      fctx.globalCompositeOperation = dark ? "screen" : "multiply";
+      for (const b of blobs) {
+        const x = (0.5 + 0.42 * Math.sin(t * b.sx + b.phx)) * fw;
+        const y = (0.5 + 0.42 * Math.sin(t * b.sy + b.phy)) * fh;
+        const rad = b.r * Math.max(fw, fh);
+        const g = fctx.createRadialGradient(x, y, 0, x, y, rad);
+        g.addColorStop(0, `rgba(${b.c},${alpha})`);
+        g.addColorStop(1, `rgba(${b.c},0)`);
+        fctx.fillStyle = g;
+        fctx.beginPath(); fctx.arc(x, y, rad, 0, 6.2832); fctx.fill();
+      }
+      fctx.globalCompositeOperation = "source-over";
+    };
+    fluidDraw(0); // initial frame (also the static frame for reduced motion)
+  }
+
   /* ---------- THE VINE — branch that draws as you scroll ----------
      A meandering path is generated in pixel space across the full document
      height. Scroll progress maps to stroke-dashoffset so the branch "grows",
@@ -629,6 +674,7 @@
   }
 
   function loop(now) {
+    if (fluidDraw) fluidDraw(now * 0.001);
     const k = 0.08; // easing factor
     cur.rx += (tgt.rx - cur.rx) * k;
     cur.ry += (tgt.ry - cur.ry) * k;

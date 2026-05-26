@@ -256,12 +256,15 @@
     });
   }
 
-  const storedLang = localStorage.getItem("vb-lang") === "en" ? "en" : "pt";
+  const storedLang = localStorage.getItem("vb-lang") === "pt" ? "pt" : "en";
   applyLang(storedLang);
   const langToggle = document.getElementById("langToggle");
   if (langToggle) {
-    langToggle.addEventListener("click", () => {
-      applyLang(root.getAttribute("lang") === "en" ? "pt" : "en");
+    langToggle.addEventListener("click", (e) => {
+      // clicking a specific PT/EN label selects it; elsewhere flips
+      const opt = e.target.closest("[data-lang-label]");
+      const next = opt ? opt.dataset.langLabel : (root.getAttribute("lang") === "en" ? "pt" : "en");
+      applyLang(next);
     });
   }
 
@@ -439,38 +442,43 @@
     leafEls.push({ y: Math.min(y1, y2), el: p });
   }
 
+  // a single soft, pointed petal (lanceolate) from the center outward
+  const petalPath = (L) => {
+    const w = L * 0.34;
+    return `M0 0 C ${w.toFixed(1)} ${(-L * 0.3).toFixed(1)} ${(w * 0.5).toFixed(1)} ${(-L * 0.82).toFixed(1)} 0 ${(-L).toFixed(1)} ` +
+           `C ${(-w * 0.5).toFixed(1)} ${(-L * 0.82).toFixed(1)} ${(-w).toFixed(1)} ${(-L * 0.3).toFixed(1)} 0 0 Z`;
+  };
+
   function addFlower(cx, cy, size) {
     const g = document.createElementNS(SVGNS, "g");
     g.setAttribute("transform", `translate(${cx.toFixed(1)} ${cy.toFixed(1)})`);
     g.setAttribute("class", "vine__flower");
-    // outer ring of 5 petals
-    for (let i = 0; i < 5; i++) {
-      const e = document.createElementNS(SVGNS, "ellipse");
-      e.setAttribute("cx", "0"); e.setAttribute("cy", (-size).toFixed(1));
-      e.setAttribute("rx", (size * 0.46).toFixed(1)); e.setAttribute("ry", (size * 0.95).toFixed(1));
-      e.setAttribute("class", "petal petal--outer");
-      e.setAttribute("transform", `rotate(${i * 72})`);
-      g.appendChild(e);
+    // outer ring — 6 slender petals
+    for (let i = 0; i < 6; i++) {
+      const pe = document.createElementNS(SVGNS, "path");
+      pe.setAttribute("d", petalPath(size * 1.85));
+      pe.setAttribute("class", "petal petal--outer");
+      pe.setAttribute("transform", `rotate(${i * 60})`);
+      g.appendChild(pe);
     }
-    // inner ring, offset, smaller
-    for (let i = 0; i < 5; i++) {
-      const e = document.createElementNS(SVGNS, "ellipse");
-      e.setAttribute("cx", "0"); e.setAttribute("cy", (-size * 0.58).toFixed(1));
-      e.setAttribute("rx", (size * 0.28).toFixed(1)); e.setAttribute("ry", (size * 0.58).toFixed(1));
-      e.setAttribute("class", "petal petal--inner");
-      e.setAttribute("transform", `rotate(${i * 72 + 36})`);
-      g.appendChild(e);
+    // inner ring — offset, shorter, lighter (depth)
+    for (let i = 0; i < 6; i++) {
+      const pe = document.createElementNS(SVGNS, "path");
+      pe.setAttribute("d", petalPath(size * 1.05));
+      pe.setAttribute("class", "petal petal--inner");
+      pe.setAttribute("transform", `rotate(${i * 60 + 30})`);
+      g.appendChild(pe);
     }
     const c = document.createElementNS(SVGNS, "circle");
-    c.setAttribute("r", (size * 0.32).toFixed(1)); c.setAttribute("class", "core");
+    c.setAttribute("r", (size * 0.26).toFixed(1)); c.setAttribute("class", "core");
     g.appendChild(c);
-    // stamen dots
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 7) * Math.PI * 2;
+    // a delicate ring of stamen
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2;
       const sd = document.createElementNS(SVGNS, "circle");
-      sd.setAttribute("cx", (Math.cos(a) * size * 0.18).toFixed(1));
-      sd.setAttribute("cy", (Math.sin(a) * size * 0.18).toFixed(1));
-      sd.setAttribute("r", (size * 0.07).toFixed(1));
+      sd.setAttribute("cx", (Math.cos(a) * size * 0.2).toFixed(1));
+      sd.setAttribute("cy", (Math.sin(a) * size * 0.2).toFixed(1));
+      sd.setAttribute("r", (size * 0.055).toFixed(1));
       sd.setAttribute("class", "stamen");
       g.appendChild(sd);
     }

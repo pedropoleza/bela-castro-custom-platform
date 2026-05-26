@@ -224,9 +224,9 @@ main > section { position: relative; z-index: 1; }
 #vineGrad .vg2 { stop-color: var(--vine-dark); }
 #leafGrad .lg0 { stop-color: var(--vine-light); }
 #leafGrad .lg1 { stop-color: var(--vine-dark); }
-#flowerGrad .fg0 { stop-color: #f6d2c8; }
-#flowerGrad .fg1 { stop-color: #de9b93; }
-#flowerGrad .fg2 { stop-color: #bf7873; }
+#flowerGrad .fg0 { stop-color: #f2e2d6; }
+#flowerGrad .fg1 { stop-color: #d8a99d; }
+#flowerGrad .fg2 { stop-color: #b07e77; }
 
 .vine__strand--front { fill: url(#vineGrad); }
 .vine__strand--back { fill: var(--vine-dark); opacity: 0.85; }
@@ -296,10 +296,10 @@ main > section { position: relative; z-index: 1; }
   transition: opacity 0.8s var(--ease), scale 1s var(--ease);
 }
 .vine__flower.bloom { opacity: 1; scale: 1; animation: flowerBreathe 7s ease-in-out infinite; }
-.vine__flower .petal { fill: url(#flowerGrad); }
-.vine__flower .petal--inner { fill: #f3c4ba; opacity: 0.95; }
-.vine__flower .core { fill: #caa05f; }
-.vine__flower .stamen { fill: #9c6f33; }
+.vine__flower .petal { fill: url(#flowerGrad); stroke: #a8746c; stroke-width: 0.4; stroke-opacity: 0.3; }
+.vine__flower .petal--inner { fill: #f0ddd0; stroke: none; opacity: 0.92; }
+.vine__flower .core { fill: #e7c98e; }
+.vine__flower .stamen { fill: #b98a3e; }
 
 @keyframes leafSway {
   0%, 100% { rotate: -5deg; }

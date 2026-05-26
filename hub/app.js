@@ -51,30 +51,42 @@ const SAMPLE_CONTACT = {
 };
 
 const seedMessages = () => ([
-  { id: uid("msg"), day: "Monday", title: "Monday — Intention Setting", channel: "WhatsApp", status: "ready", version: 2, created: "2026-05-01", edited: "2026-05-20",
-    body: "Good morning, {{contact.first_name}} ☀️\n\nDiscipline beats motivation. Set one clear intention for your week and act on it today.\n\nWhat's your focus, {{contact.first_name}}?" },
-  { id: uid("msg"), day: "Monday", title: "Monday — Confidence Boost", channel: "WhatsApp", status: "draft", version: 1, created: "2026-05-12", edited: "2026-05-12",
-    body: "{{contact.first_name}}, you are more capable than your doubts. Stand tall this week 💛" },
-  { id: uid("msg"), day: "Tuesday", title: "Tuesday — Move Your Body", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-03", edited: "2026-05-18",
-    body: "Train your body, train your mind 💪\n\n{{contact.first_name}}, 20 minutes of movement today. Consistency over intensity." },
-  { id: uid("msg"), day: "Wednesday", title: "Wednesday — Hydration & Sleep", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-04", edited: "2026-05-19",
-    body: "Small change, big result: a full glass of water now and lights out 30 min earlier tonight, {{contact.first_name}}." },
-  { id: uid("msg"), day: "Thursday", title: "Thursday — Gratitude Prompt", channel: "WhatsApp", status: "scheduled", version: 3, created: "2026-04-28", edited: "2026-05-21",
-    body: "Pause and breathe, {{contact.first_name}}. Name 3 things you're grateful for today 🤍" },
-  { id: uid("msg"), day: "Friday", title: "Friday — Did You Know?", channel: "WhatsApp", status: "draft", version: 1, created: "2026-05-10", edited: "2026-05-10",
-    body: "Did you know? A 10-minute walk after meals can steady your energy and mood. Try it today, {{contact.first_name}}!" },
-  { id: uid("msg"), day: "Sunday", title: "Sunday — Weekly Reset", channel: "WhatsApp", status: "ready", version: 2, created: "2026-04-20", edited: "2026-05-22",
-    body: "Sunday reset, {{contact.first_name}} 🌙\n\nReflect, plan and prep. What's one thing you'll do differently next week?" }
+  // Portuguese (primary — audience tag idioma-pt) · ready & formatted for WhatsApp
+  { id: uid("msg"), day: "Monday", title: "Segunda — Motivação & Mentalidade (PT)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "Bom dia, {{contact.first_name}}! ☀️\n\nDisciplina vence a motivação. Escolha *uma* intenção clara para a sua semana e dê o primeiro passo hoje.\n\nQual é o seu foco essa semana? 💛" },
+  { id: uid("msg"), day: "Tuesday", title: "Terça — Treine-se (PT)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "{{contact.first_name}}, treine o corpo e fortaleça a mente 💪\n\n20 minutinhos de movimento hoje já contam. Consistência vale mais que intensidade.\n\nBora se mexer? 🏃‍♀️" },
+  { id: uid("msg"), day: "Wednesday", title: "Quarta — Dica de Wellness (PT)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "Dica de bem-estar, {{contact.first_name}} 💧\n\nUm copo de água agora e dormir 30 min mais cedo hoje. Pequenas mudanças, grandes resultados. 🌿" },
+  { id: uid("msg"), day: "Thursday", title: "Quinta — Gratidão & Consciência (PT)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "Respira fundo, {{contact.first_name}} 🤍\n\nAnote 3 coisas pelas quais você é grata hoje. Presença muda o seu dia." },
+  { id: uid("msg"), day: "Friday", title: "Sexta — Curiosidade Wellness (PT)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "Você sabia, {{contact.first_name}}? 🧠\n\nUma caminhada de 10 minutos depois das refeições ajuda a equilibrar energia e humor. Testa hoje! ✨" },
+  { id: uid("msg"), day: "Sunday", title: "Domingo — Reset & Preparação (PT)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "Domingo de reset, {{contact.first_name}} 🌙\n\nReflita, planeje e prepare sua semana. O que você vai fazer diferente?" },
+  // English variant (audience tag idioma-en)
+  { id: uid("msg"), day: "Monday", title: "Monday — Motivation & Mindset (EN)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "Good morning, {{contact.first_name}}! ☀️\n\nDiscipline beats motivation. Pick one clear intention for your week and take the first step today.\n\nWhat's your focus this week? 💛" },
+  { id: uid("msg"), day: "Tuesday", title: "Tuesday — Train Yourself (EN)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "{{contact.first_name}}, train your body, strengthen your mind 💪\n\nJust 20 minutes of movement today counts. Consistency over intensity.\n\nLet's move? 🏃‍♀️" },
+  { id: uid("msg"), day: "Wednesday", title: "Wednesday — Wellness Tip (EN)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "Wellness tip, {{contact.first_name}} 💧\n\nA glass of water now and lights out 30 min earlier tonight. Small changes, big results. 🌿" },
+  { id: uid("msg"), day: "Thursday", title: "Thursday — Gratitude (EN)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "Breathe deep, {{contact.first_name}} 🤍\n\nWrite down 3 things you're grateful for today. Presence changes your day." },
+  { id: uid("msg"), day: "Friday", title: "Friday — Wellness Curiosity (EN)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "Did you know, {{contact.first_name}}? 🧠\n\nA 10-minute walk after meals helps balance your energy and mood. Try it today! ✨" },
+  { id: uid("msg"), day: "Sunday", title: "Sunday — Reset & Preparation (EN)", channel: "WhatsApp", status: "ready", version: 1, created: "2026-05-20", edited: "2026-05-26",
+    body: "Sunday reset, {{contact.first_name}} 🌙\n\nReflect, plan and prep your week. What's one thing you'll do differently?" }
 ]);
 
 const seedDayState = () => ({
-  Monday: { status: "ready", lastSent: "2026-05-19", eligible: 312 },
-  Tuesday: { status: "scheduled", lastSent: "2026-05-20", eligible: 298 },
-  Wednesday: { status: "draft", lastSent: "2026-05-14", eligible: 305 },
-  Thursday: { status: "sent", lastSent: "2026-05-22", eligible: 289 },
-  Friday: { status: "not configured", lastSent: null, eligible: 301 },
+  Monday: { status: "scheduled", lastSent: null, eligible: 0 },
+  Tuesday: { status: "scheduled", lastSent: null, eligible: 0 },
+  Wednesday: { status: "scheduled", lastSent: null, eligible: 0 },
+  Thursday: { status: "scheduled", lastSent: null, eligible: 0 },
+  Friday: { status: "scheduled", lastSent: null, eligible: 0 },
   Saturday: { status: "paused", lastSent: null, eligible: 0 },
-  Sunday: { status: "ready", lastSent: "2026-05-18", eligible: 276 }
+  Sunday: { status: "scheduled", lastSent: null, eligible: 0 }
 });
 
 const TAGS = ["weekly-messages-active", "weekly-messages-paused", "weekly-messages-optout", "isabela-client", "isabela-lead", "wellness-active", "wellness-inactive"];
@@ -117,16 +129,18 @@ const seedContacts = () => {
 };
 
 const seedLogs = () => ([
-  { id: "DSP-2051", day: "Thursday", title: "Thursday — Gratitude Prompt", filters: "tag: weekly-messages-active", estimated: 292, sent: 289, failed: 1, skipped: 2, when: "2026-05-22T09:00", user: "Isabela", status: "sent", notes: "Workflow WF_Isabela_Thursday_Gratitude" },
-  { id: "DSP-2050", day: "Wednesday", title: "Wednesday — Hydration & Sleep", filters: "tag: weekly-messages-active; phase=week-1", estimated: 120, sent: 118, failed: 0, skipped: 2, when: "2026-05-21T08:30", user: "Team", status: "sent", notes: "" },
-  { id: "DSP-2049", day: "Tuesday", title: "Tuesday — Move Your Body", filters: "tag: isabela-client", estimated: 210, sent: 0, failed: 0, skipped: 0, when: "2026-05-27T08:00", user: "Isabela", status: "scheduled", notes: "Auto via workflow" },
-  { id: "DSP-2048", day: "Monday", title: "Monday — Intention Setting", filters: "tag: weekly-messages-active", estimated: 312, sent: 305, failed: 4, skipped: 3, when: "2026-05-19T08:00", user: "Isabela", status: "partially sent", notes: "4 invalid numbers" }
+  { id: "SCH-MON", day: "Monday", title: "Segunda — Motivação & Mentalidade (PT)", filters: "tag: idioma-pt", estimated: 0, sent: 0, failed: 0, skipped: 0, when: "weekly · 08:00", user: "Isabela", status: "scheduled", notes: "Recurring weekly" },
+  { id: "SCH-TUE", day: "Tuesday", title: "Terça — Treine-se (PT)", filters: "tag: idioma-pt", estimated: 0, sent: 0, failed: 0, skipped: 0, when: "weekly · 08:00", user: "Isabela", status: "scheduled", notes: "Recurring weekly" },
+  { id: "SCH-WED", day: "Wednesday", title: "Quarta — Dica de Wellness (PT)", filters: "tag: idioma-pt", estimated: 0, sent: 0, failed: 0, skipped: 0, when: "weekly · 08:30", user: "Isabela", status: "scheduled", notes: "Recurring weekly" },
+  { id: "SCH-THU", day: "Thursday", title: "Quinta — Gratidão & Consciência (PT)", filters: "tag: idioma-pt", estimated: 0, sent: 0, failed: 0, skipped: 0, when: "weekly · 09:00", user: "Isabela", status: "scheduled", notes: "Recurring weekly" },
+  { id: "SCH-FRI", day: "Friday", title: "Sexta — Curiosidade Wellness (PT)", filters: "tag: idioma-pt", estimated: 0, sent: 0, failed: 0, skipped: 0, when: "weekly · 10:00", user: "Isabela", status: "scheduled", notes: "Recurring weekly" },
+  { id: "SCH-SUN", day: "Sunday", title: "Domingo — Reset & Preparação (PT)", filters: "tag: idioma-pt", estimated: 0, sent: 0, failed: 0, skipped: 0, when: "weekly · 18:00", user: "Isabela", status: "scheduled", notes: "Recurring weekly" }
 ]);
 
 const seedSettings = () => ({
   workflows: { ...WORKFLOWS },
   defaultTimes: { Monday: "08:00", Tuesday: "08:00", Wednesday: "08:30", Thursday: "09:00", Friday: "10:00", Saturday: "", Sunday: "18:00" },
-  excludedTags: ["weekly-messages-optout", "weekly-messages-paused"],
+  excludedTags: [],
   fieldMap: {
     weekly_message_enabled: "weekly_message_enabled",
     last_weekly_message_sent: "last_weekly_message_sent",
@@ -138,6 +152,14 @@ const seedSettings = () => ({
 });
 
 /* ---------------- persistent state ---------------- */
+// bump to reset stored messages/schedule when seed defaults change
+const STORE_VER = "3";
+try {
+  if (localStorage.getItem("iwh_ver") !== STORE_VER) {
+    ["messages", "dayState", "logs"].forEach((k) => localStorage.removeItem("iwh_" + k));
+    localStorage.setItem("iwh_ver", STORE_VER);
+  }
+} catch {}
 const store = {
   load(key, seed) { try { const v = localStorage.getItem("iwh_" + key); return v ? JSON.parse(v) : seed(); } catch { return seed(); } },
   save(key, val) { try { localStorage.setItem("iwh_" + key, JSON.stringify(val)); } catch {} }

@@ -145,6 +145,7 @@ const seedSettings = () => ({
   excludedTags: [],
   drip: { batch: 20, everySec: 30 },
   engagement: { flagAfter: 3, flagTag: "sem-resposta" }, // auto-flag non-responders
+  channel: "stevo", // "stevo" (WhatsApp w/ buttons) | "ghl" (workflow)
   fieldMap: {
     weekly_message_enabled: "weekly_message_enabled",
     last_weekly_message_sent: "last_weekly_message_sent",
@@ -192,6 +193,7 @@ const api = {
   async dispatchTest(payload) { return jpost("/api/dispatch/test", payload); },
   async dispatchSend(payload) { return jpost("/api/dispatch/send", payload); },
   async dispatchSchedule(payload) { return jpost("/api/dispatch/schedule", payload); },
+  async stevoSend(payload) { return jpost("/api/stevo/send", payload); },
   async saveWorkflows(map) { return { ok: true, map }; } // mapping stored client-side (settings)
 };
 // pull real location data; falls back to seeded mock if backend is absent
@@ -230,29 +232,48 @@ function recordSend(eligible) {
 const dripCfg = () => state.settings.drip || { batch: 20, everySec: 30 };
 async function dripSend({ msg, wfId, eligible, f, logDispatch, button }) {
   const drip = dripCfg();
-  const ids = eligible.map((c) => c.id);
+  const channel = state.settings.channel || "stevo";
   if (button) button.disabled = true;
-  if (!ids.length) {
+  if (!eligible.length) {
     logDispatch("sent", { sent: 0, failed: 0 }, f, eligible);
     toast("No eligible contacts to send.");
     if (button) button.disabled = false; render(); return;
   }
+  // batch the audience for drip pacing
   const chunks = [];
-  for (let i = 0; i < ids.length; i += drip.batch) chunks.push(ids.slice(i, i + drip.batch));
-  let sent = 0, failed = 0;
-  toast(`Drip started: ${ids.length} contacts · ${drip.batch}/batch every ${drip.everySec}s.`);
+  for (let i = 0; i < eligible.length; i += drip.batch) chunks.push(eligible.slice(i, i + drip.batch));
+  let sent = 0, failed = 0, pending = 0;
+  const flagAfter = engCfg().flagAfter;
+  toast(`Drip started: ${eligible.length} contacts · ${drip.batch}/batch every ${drip.everySec}s.`);
   const summary = document.getElementById("aud-summary");
   for (let b = 0; b < chunks.length; b++) {
-    const res = await api.dispatchSend({ workflowId: wfId, contactIds: chunks[b], day: msg.day });
-    if (res && res.error) failed += chunks[b].length;
-    else { sent += res && res.mock ? chunks[b].length : (res.sent || 0); failed += (res && res.failed) || 0; }
-    if (summary) summary.textContent = `Drip: ${sent}/${ids.length} sent…`;
+    if (channel === "stevo") {
+      // send each contact individually so we can personalize + add the opt-in button
+      for (const c of chunks[b]) {
+        const isLastChance = (c.noReplyCount || 0) === flagAfter - 1; // re-opt-in warning send
+        const text = renderMessage(msg.body, c) + (isLastChance ? "\n\nVocê ainda quer receber essas mensagens? Toque no botão abaixo 👇" : "");
+        const r = await api.stevoSend({
+          kind: isLastChance ? "button" : "text",
+          number: c.phone, text,
+          buttons: isLastChance ? [{ id: "keep_receiving", text: "Quero continuar recebendo" }] : []
+        });
+        if (r && r.pending) pending++;
+        else if (r && r.error) failed++;
+        else sent++;
+      }
+    } else {
+      const res = await api.dispatchSend({ workflowId: wfId, contactIds: chunks[b].map((c) => c.id), day: msg.day });
+      if (res && res.error) failed += chunks[b].length;
+      else { sent += res && res.mock ? chunks[b].length : (res.sent || 0); failed += (res && res.failed) || 0; }
+    }
+    if (summary) summary.textContent = `Drip: ${sent + pending}/${eligible.length} processed…`;
     if (b < chunks.length - 1) await new Promise((r) => setTimeout(r, drip.everySec * 1000));
   }
   recordSend(eligible);   // bump no-reply counters; auto-flag non-responders
   persist();
-  logDispatch(failed > 0 ? "partially sent" : "sent", { sent, failed }, f, eligible);
-  toast(`Drip complete: ${sent} sent, ${failed} failed.`);
+  const status = pending && !sent ? "scheduled" : (failed > 0 ? "partially sent" : "sent");
+  logDispatch(status, { sent, failed }, f, eligible);
+  toast(pending ? `Drip queued (Stevo pending number): ${pending} ready, ${sent} sent.` : `Drip complete: ${sent} sent, ${failed} failed.`);
   if (button) button.disabled = false;
   location.hash = "#/logs";
 }
@@ -302,13 +323,14 @@ const isPresetActive = (p, f) => p.filters.tag
 
 /* ---------------- preview substitution ---------------- */
 function renderMessage(body, contact = SAMPLE_CONTACT) {
+  const g = (v) => v == null ? "" : v;
   return body
-    .replace(/\{\{contact\.first_name\}\}/g, contact.first_name)
-    .replace(/\{\{contact\.full_name\}\}/g, contact.full_name)
-    .replace(/\{\{contact\.email\}\}/g, contact.email)
-    .replace(/\{\{contact\.phone\}\}/g, contact.phone)
-    .replace(/\{\{custom_field\.goal\}\}/g, contact.goal)
-    .replace(/\{\{custom_field\.program_status\}\}/g, contact.program_status);
+    .replace(/\{\{contact\.first_name\}\}/g, g(contact.first_name))
+    .replace(/\{\{contact\.full_name\}\}/g, g(contact.full_name))
+    .replace(/\{\{contact\.email\}\}/g, g(contact.email))
+    .replace(/\{\{contact\.phone\}\}/g, g(contact.phone))
+    .replace(/\{\{custom_field\.goal\}\}/g, g(contact.goal ?? (contact.custom && contact.custom.goal)))
+    .replace(/\{\{custom_field\.program_status\}\}/g, g(contact.program_status ?? (contact.custom && contact.custom.status_na_comunidade)));
 }
 
 /* ---------------- toast + modal ---------------- */
@@ -603,7 +625,7 @@ function dispatchPanels() {
         <div class="panel-title">3 · Send</div>
         <div class="audience-count" id="aud-count">${count}</div>
         <p class="muted" id="aud-summary" style="font-size:.84rem">eligible after safety exclusions</p>
-        <div class="drip-note">🩸 Drip mode (always on): ${dripCfg().batch} per batch · every ${dripCfg().everySec}s</div>
+        <div class="drip-note">🩸 Drip mode (always on): ${dripCfg().batch} per batch · every ${dripCfg().everySec}s · via ${state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow"}</div>
         <div id="d-warn"></div>
         <div class="row mt" style="gap:10px">
           <button class="btn btn--soft" id="d-test" ${!msg ? "disabled" : ""}>Send test</button>
@@ -675,6 +697,14 @@ screens.settings = () => {
       <div class="card">
         <div class="panel-title">Default send time</div>
         ${times}
+      </div>
+      <div class="card">
+        <div class="panel-title">Sending channel</div>
+        <p class="muted mb" style="font-size:.82rem">Stevo (WhatsApp) supports buttons & media and the "keep receiving" opt-in. GHL triggers the weekday workflow.</p>
+        <div class="field" style="margin-bottom:0"><select class="select" id="set-channel">
+          <option value="stevo" ${(s.channel || "stevo") === "stevo" ? "selected" : ""}>Stevo · WhatsApp (buttons)</option>
+          <option value="ghl" ${s.channel === "ghl" ? "selected" : ""}>GoHighLevel · workflow</option>
+        </select></div>
       </div>
       <div class="card">
         <div class="panel-title">Drip mode <span class="pill pill--accent">always on</span></div>
@@ -914,6 +944,7 @@ function wire(route, params) {
       state.settings.drip = { batch: batch > 0 ? batch : 20, everySec: every > 0 ? every : 30 };
       const flagAfter = parseInt($("#set-flagafter").value, 10);
       state.settings.engagement = { flagAfter: flagAfter > 0 ? flagAfter : 3, flagTag: engCfg().flagTag };
+      const ch = $("#set-channel"); if (ch) state.settings.channel = ch.value;
       persist(); toast("Settings saved."); render();
     });
   }

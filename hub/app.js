@@ -78,7 +78,11 @@ const seedDayState = () => ({
 });
 
 const TAGS = ["weekly-messages-active", "weekly-messages-paused", "weekly-messages-optout", "isabela-client", "isabela-lead", "wellness-active", "wellness-inactive"];
-const CUSTOM_FIELDS = ["wellness_program_status", "weekly_message_day_preference", "program_phase", "goal"];
+const CUSTOM_FIELDS = [
+  { key: "wellness_program_status", name: "Wellness program status" },
+  { key: "program_phase", name: "Program phase" },
+  { key: "goal", name: "Goal" }
+];
 
 const seedContacts = () => {
   const first = ["Marina", "Júlia", "Camila", "Beatriz", "Larissa", "Sofia", "Helena", "Aline", "Renata", "Patrícia", "Carla", "Fernanda", "Bianca", "Letícia"];
@@ -144,29 +148,40 @@ const state = {
   logs: store.load("logs", seedLogs),
   settings: store.load("settings", seedSettings),
   segments: store.load("segments", () => []),
-  contacts: seedContacts(),         // mock CRM base (not persisted)
+  contacts: seedContacts(),         // mock CRM base until live data loads
+  tags: TAGS,                        // replaced by real location tags on load
+  customFields: CUSTOM_FIELDS,       // replaced by real custom fields on load
+  live: false,
   dispatch: { messageId: null, filters: null }
 };
 const persist = () => { store.save("messages", state.messages); store.save("dayState", state.dayState); store.save("logs", state.logs); store.save("settings", state.settings); store.save("segments", state.segments); };
 
-/* ---------------- mock API (simulates backend -> GHL) ---------------- */
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const api = {
-  async getContacts() { await wait(150); return state.contacts; },
-  async getTags() { await wait(80); return TAGS; },
-  async getCustomFields() { await wait(80); return CUSTOM_FIELDS; },
-  async dispatchTest(payload) { await wait(400); return { ok: true, sentTo: state.settings.testContact, payload }; },
-  async dispatchSend(payload) {
-    await wait(600);
-    const audience = payload.count;
-    const failed = Math.round(audience * 0.01);
-    const skipped = payload.skipped || 0;
-    return { ok: true, dispatchId: "DSP-" + (2052 + state.logs.length), sent: audience - failed, failed, skipped };
-  },
-  async dispatchSchedule(payload) { await wait(400); return { ok: true, dispatchId: "DSP-" + (2052 + state.logs.length), scheduled: true }; },
-  async getLogs() { await wait(120); return state.logs; },
-  async saveWorkflows(map) { await wait(200); return { ok: true, map }; }
+/* ---------------- API (calls the serverless backend -> GoHighLevel) ---------------- */
+const jpost = async (url, body) => {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return r.json();
 };
+const api = {
+  async dispatchTest(payload) { return jpost("/api/dispatch/test", payload); },
+  async dispatchSend(payload) { return jpost("/api/dispatch/send", payload); },
+  async dispatchSchedule(payload) { return jpost("/api/dispatch/schedule", payload); },
+  async saveWorkflows(map) { return { ok: true, map }; } // mapping stored client-side (settings)
+};
+// pull real location data; falls back to seeded mock if backend is absent
+async function loadLive() {
+  try {
+    const [t, f, c] = await Promise.all([
+      fetch("/api/ghl/tags").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/ghl/custom-fields").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/ghl/contacts").then((r) => r.json()).catch(() => ({}))
+    ]);
+    if (t && !t.mock && Array.isArray(t.tags) && t.tags.length) { state.tags = t.tags; state.live = true; }
+    if (f && !f.mock && Array.isArray(f.fields) && f.fields.length) state.customFields = f.fields;
+    if (c && !c.mock && Array.isArray(c.contacts)) { state.contacts = c.contacts; state.live = true; }
+  } catch {}
+  const pill = document.getElementById("connState");
+  if (pill) { pill.textContent = state.live ? "Live · GoHighLevel" : "Mock data"; pill.className = "pill " + (state.live ? "pill--ok" : "pill--muted"); }
+}
 
 /* ---------------- audience logic ---------------- */
 function applyFilters(contacts, f) {
@@ -381,23 +396,24 @@ function messageEditor(id) {
 
 /* ---- D) Audience Builder ---- */
 function currentFilters() {
-  return state.dispatch.filters || { tag: "weekly-messages-active", withoutTag: "", field: "", fieldValue: "", pipeline: "", contactStatus: "", source: "", excludeOptout: true, excludePaused: true };
+  return state.dispatch.filters || { tag: "", withoutTag: "", field: "", fieldValue: "", pipeline: "", contactStatus: "", source: "", excludeOptout: true, excludePaused: true };
 }
 screens.audience = () => {
   const f = currentFilters();
-  const opt = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option ${x === v ? "selected" : ""}>${x}</option>`).join("");
+  const opt = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option ${x === v ? "selected" : ""}>${esc(x)}</option>`).join("");
+  const optF = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option value="${esc(x.key)}" ${x.key === v ? "selected" : ""}>${esc(x.name)}</option>`).join("");
   return `
-    <h1 class="section-title">Audience Builder</h1><p class="section-sub">Segment the GoHighLevel contact base. Safety exclusions are always applied. Save a segment to reuse it in the Dispatch Center.</p>
+    <h1 class="section-title">Audience Builder</h1><p class="section-sub">Segment the GoHighLevel contact base${state.live ? " (live)" : ""}. Safety exclusions are always applied. Save a segment to reuse it in the Dispatch Center.</p>
     <div class="split">
       <div class="card">
         <div class="filter-row">
-          <div class="field" style="margin:0"><label>Has tag</label><select class="select" id="f-tag">${opt(TAGS, f.tag)}</select></div>
-          <div class="field" style="margin:0"><label>Without tag</label><select class="select" id="f-withoutTag">${opt(TAGS, f.withoutTag)}</select></div>
+          <div class="field" style="margin:0"><label>Has tag</label><select class="select" id="f-tag">${opt(state.tags, f.tag)}</select></div>
+          <div class="field" style="margin:0"><label>Without tag</label><select class="select" id="f-withoutTag">${opt(state.tags, f.withoutTag)}</select></div>
           <span></span>
         </div>
         <div class="filter-row">
-          <div class="field" style="margin:0"><label>Custom field</label><select class="select" id="f-field">${opt(CUSTOM_FIELDS, f.field)}</select></div>
-          <div class="field" style="margin:0"><label>Field value equals</label><input class="input" id="f-fieldValue" value="${esc(f.fieldValue)}" placeholder="e.g. active / week-1"></div>
+          <div class="field" style="margin:0"><label>Custom field</label><select class="select" id="f-field">${optF(state.customFields, f.field)}</select></div>
+          <div class="field" style="margin:0"><label>Field value equals</label><input class="input" id="f-fieldValue" value="${esc(f.fieldValue)}" placeholder="e.g. Português / active"></div>
           <span></span>
         </div>
         <div class="filter-row">
@@ -443,7 +459,7 @@ screens.dispatch = (params) => {
           <option value="">— select —</option>
           ${state.messages.filter((m) => m.status !== "archived").map((m) => `<option value="${m.id}" ${m.id === state.dispatch.messageId ? "selected" : ""}>${esc(m.day)} · ${esc(m.title)}</option>`).join("")}
         </select></div>
-        ${msg ? `<div class="preview-phone"><div class="bubble">${esc(renderMessage(msg.body))}</div><div class="preview-meta">${esc(msg.channel)} · workflow: ${WORKFLOWS[msg.day] || "— (offline)"}</div></div>` : `<p class="muted">Select a message to preview it.</p>`}
+        ${msg ? `<div class="preview-phone"><div class="bubble">${esc(renderMessage(msg.body))}</div><div class="preview-meta">${esc(msg.channel)} · workflow: ${state.settings.workflows[msg.day] || "— (offline)"}</div></div>` : `<p class="muted">Select a message to preview it.</p>`}
         <div class="panel-title mt">2 · Audience</div>
         <p class="muted" style="font-size:.84rem">${esc(filtersSummary(f))}</p>
         <a class="btn btn--ghost btn--sm" href="#/audience">Edit audience →</a>
@@ -512,7 +528,7 @@ screens.settings = () => {
       </div>
       <div class="card">
         <div class="panel-title">Excluded tags (safety)</div>
-        ${TAGS.map((t) => `<div class="checkline"><input type="checkbox" data-extag="${t}" ${s.excludedTags.includes(t) ? "checked" : ""}><label>${t}</label></div>`).join("")}
+        ${state.tags.map((t) => `<div class="checkline"><input type="checkbox" data-extag="${esc(t)}" ${s.excludedTags.includes(t) ? "checked" : ""}><label>${esc(t)}</label></div>`).join("")}
         <div class="field mt"><label>Test contact (email/phone)</label><input class="input" id="set-test" value="${esc(s.testContact)}"></div>
       </div>
       <div class="card">
@@ -614,7 +630,7 @@ function wire(route, params) {
       state.logs.unshift({
         id: res.dispatchId || uid("DSP"), day: msg.day, title: msg.title, filters: filtersSummary(f),
         estimated: eligible.length, sent: res.sent || 0, failed: res.failed || 0, skipped: res.skipped || 0,
-        when: new Date().toISOString(), user: "Isabela", status, notes: "Workflow " + (WORKFLOWS[msg.day] || "—")
+        when: new Date().toISOString(), user: "Isabela", status, notes: "Workflow " + (state.settings.workflows[msg.day] || "—")
       });
       // update day + contact metadata (mock CRM sync)
       if (status === "sent" || status === "partially sent") {
@@ -624,26 +640,34 @@ function wire(route, params) {
       }
       persist();
     };
+    const wfId = state.settings.workflows[msg.day]; // mapped GHL workflow id/name
     const test = $("#d-test"); test && (test.onclick = async () => {
-      test.disabled = true; await api.dispatchTest({ messageId: msg.id }); test.disabled = false;
-      toast("Test sent to " + state.settings.testContact + ".");
+      test.disabled = true;
+      const res = await api.dispatchTest({ contactId: state.settings.testContact, channel: msg.channel, message: renderMessage(msg.body) });
+      test.disabled = false;
+      if (res && res.error) toast("Test failed: " + res.error, true);
+      else toast(res && res.mock ? "Test (mock) ok — connect backend to really send." : "Test sent.");
     });
     const sched = $("#d-schedule"); sched && (sched.onclick = () => {
       modal({ title: "Schedule dispatch", body: `Schedule <strong>${esc(msg.title)}</strong> for <strong>${eligible.length}</strong> contacts using ${esc(filtersSummary(f))}.`, confirmLabel: "Schedule", onConfirm: async () => {
-        const res = await api.dispatchSchedule({ messageId: msg.id, count: eligible.length });
-        logDispatch("scheduled", res); toast("Dispatch scheduled."); render();
+        const res = await api.dispatchSchedule({ day: msg.day, when: state.settings.defaultTimes[msg.day], count: eligible.length });
+        logDispatch("scheduled", res || {}); toast("Dispatch scheduled."); render();
       }});
     });
     const send = $("#d-send"); send && (send.onclick = () => {
       modal({
         title: "Confirm dispatch",
-        warn: eligible.length > 250 ? `High volume: ${eligible.length} contacts.` : (!f.tag && !f.field && !f.pipeline && !f.source ? "No filter selected — entire eligible base." : ""),
-        body: `You are about to send <strong>${esc(msg.title)}</strong> to <strong>${eligible.length}</strong> contacts via ${WORKFLOWS[msg.day] || "—"}.<br>This action cannot be undone. Confirm dispatch?`,
+        warn: !wfId ? "No workflow mapped for this day (set it in Settings)." : (eligible.length > 250 ? `High volume: ${eligible.length} contacts.` : (!f.tag && !f.field && !f.pipeline && !f.source ? "No filter selected — entire eligible base." : "")),
+        body: `You are about to send <strong>${esc(msg.title)}</strong> to <strong>${eligible.length}</strong> contacts via <strong>${esc(wfId || "—")}</strong>.<br>This action cannot be undone. Confirm dispatch?`,
         confirmLabel: "Send now", onConfirm: async () => {
           send.disabled = true;
-          const res = await api.dispatchSend({ messageId: msg.id, count: eligible.length, skipped: 0 });
-          logDispatch(res.failed > 0 ? "partially sent" : "sent", res);
-          toast(`Dispatched: ${res.sent} sent, ${res.failed} failed.`); location.hash = "#/logs";
+          const res = await api.dispatchSend({ workflowId: wfId, contactIds: eligible.map((c) => c.id), day: msg.day });
+          send.disabled = false;
+          if (res && res.error) { toast("Dispatch failed: " + res.error, true); logDispatch("failed", { sent: 0, failed: eligible.length }); render(); return; }
+          const sent = res && res.mock ? eligible.length : (res.sent || 0);
+          const failed = (res && res.failed) || 0;
+          logDispatch(failed > 0 ? "partially sent" : "sent", { dispatchId: res.dispatchId, sent, failed, skipped: 0 });
+          toast(`Dispatched: ${sent} sent, ${failed} failed.`); location.hash = "#/logs";
         }
       });
     });
@@ -716,6 +740,7 @@ function init() {
     document.documentElement.setAttribute("data-theme", next); localStorage.setItem("iwh_theme", next); setThemeLabel();
   };
   window.addEventListener("hashchange", render);
-  render();
+  render();                                  // instant paint (seed data)
+  loadLive().then(render);                   // refresh with real GoHighLevel data
 }
 init();

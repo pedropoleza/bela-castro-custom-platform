@@ -699,11 +699,8 @@ function render() {
   $("#modalRoot").innerHTML = "";
   const view = screens[route] || screens.dashboard;
   $("#screen").innerHTML = view(params);
-  $("#topTitle").textContent = (NAV.find((n) => n.id === route) || {}).label || "Dashboard";
   $("#nav").querySelectorAll("a").forEach((a) => a.classList.toggle("is-active", a.dataset.route === route));
-  $("#screen").scrollTo?.(0, 0);
   window.scrollTo(0, 0);
-  $("#sidebar").classList.remove("is-open");
   wire(route, params);
 }
 
@@ -720,7 +717,6 @@ function init() {
     const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
     document.documentElement.setAttribute("data-theme", next); localStorage.setItem("iwh_theme", next); setThemeLabel();
   };
-  $("#menuBtn").onclick = () => $("#sidebar").classList.toggle("is-open");
   window.addEventListener("hashchange", render);
   render();
 }

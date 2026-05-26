@@ -504,10 +504,14 @@
         <h2 data-i18n="join.title">Dê o primeiro passo</h2>
         <p data-i18n="join.lead">Preencha e continue a conversa no WhatsApp — vamos te ajudar a começar sua jornada.</p>
       </header>
-      <form class="join-form reveal" data-reveal id="joinForm" novalidate>
+      <form class="join-form reveal" data-reveal id="joinForm">
         <div class="join-field">
           <label for="jf-name" data-i18n="join.name">Seu nome</label>
           <input id="jf-name" name="name" type="text" autocomplete="name" required />
+        </div>
+        <div class="join-field">
+          <label for="jf-phone" data-i18n="join.phone">WhatsApp / Telefone</label>
+          <input id="jf-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required />
         </div>
         <div class="join-field">
           <label for="jf-email" data-i18n="join.email">E-mail (opcional)</label>

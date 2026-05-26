@@ -250,6 +250,7 @@
     "join.title": { en: "Take the first step" },
     "join.lead": { en: "Fill this in and continue the conversation on WhatsApp — we'll help you begin your journey." },
     "join.name": { en: "Your name" },
+    "join.phone": { en: "WhatsApp / Phone" },
     "join.email": { en: "Email (optional)" },
     "join.goal": { en: "Your main focus" },
     "join.goal1": { en: "Mindset & discipline" },
@@ -300,10 +301,10 @@
       e.preventDefault();
       const en = root.getAttribute("lang") === "en";
       const val = (s) => { const el = joinForm.querySelector(`[name="${s}"]`); return el ? el.value.trim() : ""; };
-      const name = val("name"), email = val("email"), goal = val("goal");
+      const name = val("name"), phone = val("phone"), email = val("email"), goal = val("goal");
       const msg = en
-        ? `Hi! My name is ${name || "—"}. Main focus: ${goal}.${email ? " Email: " + email + "." : ""} I'd like to join the Vida Bela Club.`
-        : `Olá! Meu nome é ${name || "—"}. Foco principal: ${goal}.${email ? " E-mail: " + email + "." : ""} Quero participar do Vida Bela Club.`;
+        ? `Hi! My name is ${name || "—"}. Phone: ${phone}. Main focus: ${goal}.${email ? " Email: " + email + "." : ""} I'd like to join the Vida Bela Club.`
+        : `Olá! Meu nome é ${name || "—"}. Telefone: ${phone}. Foco principal: ${goal}.${email ? " E-mail: " + email + "." : ""} Quero participar do Vida Bela Club.`;
       window.open(waLink(msg), "_blank");
     });
   }
@@ -665,7 +666,10 @@
   function buildVine() {
     if (!vineSvg || !vineStrandA) return;
     const W = document.documentElement.clientWidth;
-    const H = document.documentElement.scrollHeight;
+    const mainEl = document.querySelector("main");
+    // span the vine across the content only (exclude the footer) so it has
+    // fully drawn by the time the reader reaches the closing form
+    const H = mainEl ? mainEl.scrollHeight : document.documentElement.scrollHeight;
     docH = H;
     const flowSec = document.getElementById("flow");
     if (flowSec) { flowTop = flowSec.offsetTop; flowBot = flowSec.offsetTop + flowSec.offsetHeight; }
@@ -730,6 +734,20 @@
       groupTarget = null;
     });
 
+    // leaves & buds sprouting along the braided trunk in the weekly section,
+    // so the entwined branch isn't bare as it wraps the wooden bar
+    if (flowBot > flowTop) {
+      let m = 0;
+      for (let y = flowTop + 90; y < flowBot - 70; y += 78, m++) {
+        const x = vineX(y, W);
+        const side = m % 2 ? 1 : -1;
+        addLeaf(x + side * 13, y, side * 56, 15 - (m % 3), "leaf");      // sprout off the strand
+        if (m % 2) addLeaf(x - side * 11, y + 26, side * -118, 11, "leaf");
+        if (m % 4 === 1) addLeaf(x - side * 9, y - 22, side * -70, 9, "bud");
+        if (m % 5 === 2) addFlower(x + side * 16, y - 6, 11);            // an occasional bloom
+      }
+    }
+
     // hero flourish — a lush cluster near the top-left corner
     const hx = vineX(150, W);
     addTwig(hx, 180, hx + reach * 1.2, 96);
@@ -746,7 +764,7 @@
   let grow = 0;
   function drawVine() {
     if (!vineReady) return;
-    const p = Math.max(0, Math.min(1, (window.scrollY + vh2 * 0.92) / docH));
+    const p = Math.max(0, Math.min(1, (window.scrollY + vh2) / docH));
     const revealed = p * docH * grow;
     if (vineClipRect) vineClipRect.setAttribute("height", revealed.toFixed(1));
     for (let i = 0; i < leafEls.length; i++) {

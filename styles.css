@@ -316,6 +316,46 @@ main > section { position: relative; z-index: 1; }
 .vine__flower .core { fill: #e7c98e; }
 .vine__flower .stamen { fill: #b98a3e; }
 
+/* ---------- HOVER TEXTURE on the branches (all of them) ---------- */
+.vine__strand, .vine__leaf, .vine__flower, .vine__bud,
+.phase-vine .pv-stem, .phase-vine .pv-leaf,
+.leaf-mark .lm-leaf, .leaf-mark .lm-petal { pointer-events: auto; }
+.vine__leaf, .leaf-mark .lm-leaf, .phase-vine .pv-leaf {
+  transition: opacity 0.7s var(--ease), scale 0.9s var(--ease), filter 0.3s var(--ease), rotate 0.45s var(--ease);
+}
+.vine__leaf:hover, .leaf-mark .lm-leaf:hover, .phase-vine .pv-leaf:hover {
+  filter: brightness(1.25) saturate(1.3); rotate: 8deg; cursor: pointer;
+}
+.vine__flower { transition: opacity 0.8s var(--ease), scale 1s var(--ease), filter 0.3s var(--ease); }
+.vine__flower:hover { scale: 1.16; filter: brightness(1.12) drop-shadow(0 2px 6px rgba(0,0,0,0.3)); cursor: pointer; }
+.vine__strand { transition: filter 0.35s var(--ease); }
+.vine__strand:hover { filter: brightness(1.2) drop-shadow(0 0 7px var(--vine-glow)); cursor: pointer; }
+.vine__bud { transition: scale 0.7s var(--ease), filter 0.3s var(--ease); }
+.vine__bud:hover { scale: 1.35; filter: brightness(1.3); cursor: pointer; }
+
+/* ---------- richer card hover (less "dry") ---------- */
+.card .card__n { transition: transform 0.4s var(--ease), background 0.4s var(--ease), color 0.4s var(--ease), border-color 0.4s var(--ease); }
+.card:hover .card__n { transform: scale(1.12) rotate(-6deg); background: var(--card-accent, var(--accent)); color: var(--bg); border-color: var(--card-accent, var(--accent)); }
+.card h3 { transition: color 0.4s var(--ease); }
+.card:hover h3 { color: var(--card-accent, var(--accent)); }
+
+.phase__body { transition: transform 0.5s var(--ease), border-color 0.5s var(--ease), box-shadow 0.5s var(--ease); }
+.phase:hover .phase__body { transform: translateY(-4px); border-color: color-mix(in srgb, var(--accent) 50%, var(--card-brd)); }
+.phase__n { transition: transform 0.45s var(--ease), box-shadow 0.45s var(--ease); }
+.phase:hover .phase__n { transform: scale(1.1) rotate(-5deg); }
+
+/* ripple "generations" steps gain a clear, lively hover */
+.ripple-step { transition: transform 0.5s var(--ease), box-shadow 0.5s var(--ease), border-color 0.5s var(--ease); }
+.ripple-step:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 42px 80px -36px rgba(40, 55, 35, 0.55);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--card-brd));
+}
+.ripple-step__n { transition: transform 0.45s var(--ease), background 0.4s var(--ease), color 0.4s var(--ease); }
+.ripple-step:hover .ripple-step__n { transform: scale(1.12) rotate(-6deg); background: var(--accent); color: var(--bg); }
+.ripple-step h3 { transition: color 0.4s var(--ease); }
+.ripple-step:hover h3 { color: var(--accent); }
+
 @keyframes leafSway {
   0%, 100% { rotate: -5deg; }
   50% { rotate: 5deg; }

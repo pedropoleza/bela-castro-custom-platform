@@ -266,6 +266,19 @@ main > section { position: relative; z-index: 1; }
 .vine__leaf.bloom { opacity: 0.95; scale: 1; animation: leafSway 6s ease-in-out infinite; }
 .vine__vein { stroke: var(--vine-dark); stroke-width: 1; opacity: 0.4; fill: none; }
 
+/* station marker where the branch meets each section */
+.vine__node {
+  fill: var(--vine-light);
+  stroke: var(--vine-dark);
+  stroke-width: 1.5;
+  opacity: 0;
+  scale: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 0.5s var(--ease), scale 0.6s var(--ease);
+}
+.vine__node.bloom { opacity: 0.92; scale: 1; }
+
 .vine__twig {
   fill: none;
   stroke: var(--vine);

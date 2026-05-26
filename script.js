@@ -399,9 +399,25 @@
   let docH = 1;
   let vh2 = window.innerHeight;
 
-  // stem anchored to the LEFT side, entering from the top-left corner
-  const vineX = (y, W) =>
-    W * 0.085 + Math.sin(y * 0.0042) * (W * 0.055) + Math.sin(y * 0.0115) * (W * 0.022);
+  // the branch circulates: enters top-left, descends the left, crosses through
+  // the middle to the right, then descends the right — organic and weaving
+  const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const vineX = (y, W) => {
+    const H = docH || 1;
+    const t = y / H;
+    const cross = smooth(0.40, 0.60, t);            // 0 = left (top), 1 = right (bottom)
+    const base = W * 0.12 + (W * 0.76) * cross;
+    const weave = Math.sin(y * 0.0052) * (W * 0.03) + Math.sin(y * 0.012) * (W * 0.014);
+    return base + weave;
+  };
+
+  function addNode(cx, cy) {
+    const c = document.createElementNS(SVGNS, "circle");
+    c.setAttribute("cx", cx.toFixed(1)); c.setAttribute("cy", cy.toFixed(1));
+    c.setAttribute("r", "6.5"); c.setAttribute("class", "vine__node");
+    leavesG.appendChild(c);
+    leafEls.push({ y: cy, el: c });
+  }
 
   function addLeaf(cx, cy, angleDeg, size, kind) {
     const g = document.createElementNS(SVGNS, "g");
@@ -537,12 +553,34 @@
     sections.forEach((sec, idx) => {
       const yc = sec.offsetTop + Math.min(sec.offsetHeight * 0.42, 200);
       const sx = vineX(yc, W);
-      const tx = sx + reach, ty = yc - 26;
-      addTwig(sx, yc, tx, ty);
-      addLeaf(tx, ty, angAt(yc) + 42, 28, "leaf");
-      if (idx % 2 === 0) addFlower(tx + 12, ty - 22, 16);
-      else addLeaf(sx + 26, yc + 38, angAt(yc) - 58, 21, "leaf");
-      addLeaf(sx, yc - 64, angAt(yc) - 120, 19, "leaf");
+      const onLeft = sx < W * 0.5;
+      const dir = onLeft ? 1 : -1;            // tendrils always reach inward
+      const tx = sx + reach * dir, ty = yc - 26;
+      const base = angAt(yc);
+
+      addNode(sx, yc);                          // each section is a "station"
+
+      // a distinct arrival flourish per station
+      const kind = idx % 4;
+      if (kind === 0) {
+        addTwig(sx, yc, tx, ty);
+        addFlower(tx + dir * 12, ty - 20, 18);
+        addLeaf(sx, yc - 58, base - dir * 120, 18, "leaf");
+      } else if (kind === 1) {
+        addTwig(sx, yc, tx, ty);
+        addLeaf(tx, ty, base + dir * 42, 28, "leaf");
+        addLeaf(sx + dir * 24, yc + 40, base - dir * 58, 21, "leaf");
+        addLeaf(sx, yc - 52, base - dir * 70, 14, "bud");
+      } else if (kind === 2) {
+        addTwig(sx, yc, tx, ty);
+        addFlower(tx + dir * 14, ty - 18, 21);
+        addLeaf(sx, yc + 46, base + dir * 120, 17, "leaf");
+        addLeaf(tx - dir * 18, ty + 18, base + dir * 30, 15, "bud");
+      } else {
+        addTwig(sx, yc, tx, ty);
+        addLeaf(tx, ty, base + dir * 40, 26, "leaf");
+        addLeaf(sx, yc - 50, base - dir * 110, 18, "leaf");
+      }
     });
 
     // hero flourish — a lush cluster near the top-left corner

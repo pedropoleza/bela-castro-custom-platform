@@ -344,41 +344,85 @@
   (function plantSprigs() {
     const leafD = (s) => `M0 0 C ${s*0.34} ${-s*0.3} ${s*0.18} ${-s*0.82} 0 ${-s} C ${-s*0.18} ${-s*0.82} ${-s*0.34} ${-s*0.3} 0 0 Z`;
     const petalD = (s) => `M0 0 C ${s*0.4} ${-s*0.35} ${s*0.25} ${-s*0.9} 0 ${-s} C ${-s*0.25} ${-s*0.9} ${-s*0.4} ${-s*0.35} 0 0 Z`;
-    const leaf = (x, y, rot, s, d) => `<g transform="translate(${x} ${y}) rotate(${rot})"><path class="lm-leaf" style="--d:${d}" d="${leafD(s)}"/></g>`;
+    const leaf = (x, y, rot, s, d) => `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot})"><path class="lm-leaf" style="--d:${d}" d="${leafD(s)}"/></g>`;
     const topFlower = (cx, cy, s, d) => {
       let o = "";
-      for (let i = 0; i < 5; i++) o += `<g transform="translate(${cx} ${cy}) rotate(${i * 72})"><path class="lm-petal" style="--d:${d}" d="${petalD(s)}"/></g>`;
-      return o + `<circle class="lm-bud" cx="${cx}" cy="${cy}" r="${(s * 0.3).toFixed(1)}"/>`;
+      for (let i = 0; i < 5; i++) o += `<g transform="translate(${cx} ${cy.toFixed(1)}) rotate(${i * 72})"><path class="lm-petal" style="--d:${d}" d="${petalD(s)}"/></g>`;
+      return o + `<circle class="lm-bud" cx="${cx}" cy="${cy.toFixed(1)}" r="${(s * 0.3).toFixed(1)}"/>`;
     };
-    const topBud = (cx, cy, r) => `<circle class="lm-bud" cx="${cx}" cy="${cy}" r="${r}"/>`;
-    const topBerries = (cx, cy) => `<circle class="lm-bud" cx="${cx - 5}" cy="${cy + 2}" r="3.2"/><circle class="lm-bud" cx="${cx + 5}" cy="${cy + 2}" r="3.2"/><circle class="lm-bud" cx="${cx}" cy="${cy - 4}" r="3.2"/>`;
+    const topBud = (cx, cy, r) => `<circle class="lm-bud" cx="${cx}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}"/>`;
 
-    // a distinct sprig per section: varying leaf count, arrangement and crown
-    const conf = [
-      { pairs: 3, top: "bud", alt: false },
-      { pairs: 2, top: "flower", alt: false },
-      { pairs: 4, top: "berry", alt: true },
-      { pairs: 3, top: "flower", alt: false },
-      { pairs: 2, top: "bud", alt: true },
-      { pairs: 3, top: "berry", alt: false },
-      { pairs: 4, top: "flower", alt: true },
-      { pairs: 2, top: "bud", alt: true }
-    ];
+    const heads = document.querySelectorAll(".section-head");
+    const n = heads.length;
+
+    // the sprig GROWS section by section: short 1-leaf sprout -> tall, full,
+    // flowering branch, so it reads as a continuous progression of growth
     const build = (i) => {
-      const c = conf[i % conf.length];
-      let body = `<path class="lm-stem" d="M30 56 C 30 44 30 30 30 12"/>`;
-      const ys = [46, 37, 28, 21].slice(0, c.pairs);
-      ys.forEach((y, k) => {
-        const s = 18 - k * 2.4;
-        if (c.alt) body += leaf(30, y, (k % 2 ? 1 : -1) * 50, s, k);
-        else body += leaf(30, y, -50, s, k) + leaf(30, y, 50, s, k);
-      });
-      if (c.top === "flower") body += topFlower(30, 13, 9, c.pairs);
-      else if (c.top === "berry") body += topBerries(30, 12);
-      else body += topBud(30, 11, 5);
+      const p = n > 1 ? i / (n - 1) : 0;
+      const pairs = 1 + Math.round(p * 3);          // 1 -> 4 leaf pairs
+      const topY = 44 - p * 32;                     // 44 (short) -> 12 (tall)
+      const sizeK = 0.6 + p * 0.4;                  // overall scale grows
+      let body = `<path class="lm-stem" d="M30 56 C 30 ${(44 - p*10).toFixed(1)} 30 ${(28 - p*8).toFixed(1)} 30 ${topY.toFixed(1)}"/>`;
+      const span = 50 - (topY + 5);
+      for (let k = 0; k < pairs; k++) {
+        const ly = 50 - span * ((k + 0.5) / pairs);
+        const s = Math.max(6, (15 - k * 2.2) * sizeK);
+        body += leaf(30, ly, -50, s, k) + leaf(30, ly, 50, s, k);
+      }
+      if (p > 0.72) body += topFlower(30, topY, 8 * sizeK, pairs);   // blooms toward the end
+      else body += topBud(30, topY - 1, (p > 0.34 ? 4.5 : 3) * sizeK);
       return `<svg class="leaf-mark" viewBox="0 0 60 56" aria-hidden="true">${body}</svg>`;
     };
-    document.querySelectorAll(".section-head").forEach((h, i) => h.insertAdjacentHTML("afterbegin", build(i)));
+    heads.forEach((h, i) => h.insertAdjacentHTML("afterbegin", build(i)));
+  })();
+
+  /* ---------- DECORATIVE VINE around the phases timeline bar ----------
+     A separate ornamental pair of thin strands twists around the central
+     spine of the 4-Phases section, with little leaves — purely visual.      */
+  (function phaseVine() {
+    const NS = "http://www.w3.org/2000/svg";
+    const track = document.querySelector(".phase-track");
+    if (!track) return;
+    const cx = 58; // matches the spine line position
+    function build() {
+      const w = track.clientWidth, h = track.scrollHeight;
+      if (!w || !h) return;
+      let svg = track.querySelector(".phase-vine");
+      if (!svg) {
+        svg = document.createElementNS(NS, "svg");
+        svg.setAttribute("class", "phase-vine");
+        svg.setAttribute("aria-hidden", "true");
+        track.insertBefore(svg, track.firstChild);
+      }
+      svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      svg.setAttribute("width", w); svg.setAttribute("height", h);
+      svg.innerHTML = "";
+      const strand = (amp, ph) => {
+        let d = "";
+        for (let y = 4; y <= h - 4; y += 8) {
+          const x = cx + Math.sin(y * 0.05 + ph) * amp;
+          d += (d ? "L" : "M") + x.toFixed(1) + " " + y + " ";
+        }
+        const p = document.createElementNS(NS, "path");
+        p.setAttribute("class", "pv-stem"); p.setAttribute("d", d);
+        svg.appendChild(p);
+      };
+      strand(9, 0); strand(9, Math.PI);
+      for (let y = 26, j = 0; y < h - 20; y += 40, j++) {
+        const side = j % 2 ? 1 : -1;
+        const g = document.createElementNS(NS, "g");
+        g.setAttribute("transform", `translate(${(cx + side * 9).toFixed(1)} ${y}) rotate(${side * 58})`);
+        const s = 9;
+        const lf = document.createElementNS(NS, "path");
+        lf.setAttribute("class", "pv-leaf");
+        lf.setAttribute("d", `M0 0 C ${s*0.34} ${-s*0.3} ${s*0.18} ${-s*0.82} 0 ${-s} C ${-s*0.18} ${-s*0.82} ${-s*0.34} ${-s*0.3} 0 0 Z`);
+        g.appendChild(lf); svg.appendChild(g);
+      }
+    }
+    build();
+    window.addEventListener("load", build);
+    window.addEventListener("resize", build);
+    setTimeout(build, 800);
   })();
 
   /* ---------- FLUID LIGHT BACKGROUND (canvas) ----------

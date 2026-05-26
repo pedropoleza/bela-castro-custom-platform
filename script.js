@@ -401,16 +401,13 @@
   let docH = 1;
   let vh2 = window.innerHeight;
 
-  // the branch circulates: enters top-left, descends the left, crosses through
-  // the middle to the right, then descends the right — organic and weaving
-  const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  // the branch wanders freely across the page — drifting through the center
+  // and toward either side at different points, organic rather than fixed
   const vineX = (y, W) => {
-    const H = docH || 1;
-    const t = y / H;
-    const cross = smooth(0.47, 0.55, t);            // narrow band = a horizontal sweep across
-    const base = W * 0.12 + (W * 0.76) * cross;
-    const weave = Math.sin(y * 0.0052) * (W * 0.03) + Math.sin(y * 0.012) * (W * 0.014);
-    return base + weave;
+    const swing = Math.sin(y * 0.0011 + 4.4) * (W * 0.30);   // slow wide sweep L<->R through center
+    const swing2 = Math.sin(y * 0.0037 + 0.7) * (W * 0.08);  // secondary undulation
+    const weave = Math.sin(y * 0.013) * (W * 0.018);         // fine organic weave
+    return W * 0.5 + swing + swing2 + weave;
   };
 
   function addNode(cx, cy) {
@@ -539,11 +536,11 @@
     const braidAmp = 13, braidFreq = 0.022;
     const aX = (y) => vineX(y, W) + Math.sin(y * braidFreq) * braidAmp;
     const bX = (y) => vineX(y, W) - Math.sin(y * braidFreq) * braidAmp;
-    const dA = tapered(aX, W * 0.02 + braidAmp, H, 10, 2.6);
-    const dB = tapered(bX, W * 0.02 - braidAmp, H, 10, 2.6);
+    const dA = tapered(aX, aX(0), H, 10, 2.6);
+    const dB = tapered(bX, bX(0), H, 10, 2.6);
     vineStrandA.setAttribute("d", dA);
     vineStrandB.setAttribute("d", dB);
-    vineGlow.setAttribute("d", tapered((y) => vineX(y, W), W * 0.02, H, 26, 6));
+    vineGlow.setAttribute("d", tapered((y) => vineX(y, W), vineX(0, W), H, 26, 6));
 
     leavesG.innerHTML = "";
     leafEls.length = 0;

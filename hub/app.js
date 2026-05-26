@@ -122,7 +122,9 @@ const seedContacts = () => {
       pipeline: ["Lead", "Onboarding", "Active Client", "Renewal"][i % 4],
       status: optout ? "unsubscribed" : "active",
       source: ["Instagram", "Referral", "Ad", "Organic"][i % 4],
-      lastActivity: "2026-05-" + (10 + (i % 18))
+      lastActivity: "2026-05-" + (10 + (i % 18)),
+      noReplyCount: i % 5,           // messages sent with no reply
+      lastReplyAfter: i % 3 === 0    // replied since last send (resets counter)
     });
   }
   return cs;
@@ -141,6 +143,8 @@ const seedSettings = () => ({
   workflows: { ...WORKFLOWS },
   defaultTimes: { Monday: "08:00", Tuesday: "08:00", Wednesday: "08:30", Thursday: "09:00", Friday: "10:00", Saturday: "", Sunday: "18:00" },
   excludedTags: [],
+  drip: { batch: 20, everySec: 30 },
+  engagement: { flagAfter: 3, flagTag: "sem-resposta" }, // auto-flag non-responders
   fieldMap: {
     weekly_message_enabled: "weekly_message_enabled",
     last_weekly_message_sent: "last_weekly_message_sent",
@@ -174,6 +178,7 @@ const state = {
   tags: TAGS,                        // replaced by real location tags on load
   customFields: CUSTOM_FIELDS,       // replaced by real custom fields on load
   live: false,
+  ui: { dayOpen: null },
   dispatch: { messageId: null, filters: null }
 };
 const persist = () => { store.save("messages", state.messages); store.save("dayState", state.dayState); store.save("logs", state.logs); store.save("settings", state.settings); store.save("segments", state.segments); };
@@ -203,12 +208,62 @@ async function loadLive() {
   } catch {}
 }
 
+/* ---------------- engagement / non-responder flagging ---------------- */
+const engCfg = () => state.settings.engagement || { flagAfter: 3, flagTag: "sem-resposta" };
+// a contact is a non-responder if explicitly tagged, or received N+ messages with no reply
+const isNonResponder = (c) => {
+  const e = engCfg();
+  return (c.tags || []).includes(e.flagTag) || (c.noReplyCount || 0) >= e.flagAfter;
+};
+const nonResponders = () => state.contacts.filter(isNonResponder);
+// after a send, bump the no-reply counter and auto-flag those who hit the limit
+function recordSend(eligible) {
+  const e = engCfg();
+  eligible.forEach((c) => {
+    if (c.lastReplyAfter) { c.noReplyCount = 0; return; }   // replied since last send
+    c.noReplyCount = (c.noReplyCount || 0) + 1;
+    if (c.noReplyCount >= e.flagAfter && !(c.tags || []).includes(e.flagTag)) (c.tags = c.tags || []).push(e.flagTag);
+  });
+}
+
+/* ---------------- drip mode (always on) ---------------- */
+const dripCfg = () => state.settings.drip || { batch: 20, everySec: 30 };
+async function dripSend({ msg, wfId, eligible, f, logDispatch, button }) {
+  const drip = dripCfg();
+  const ids = eligible.map((c) => c.id);
+  if (button) button.disabled = true;
+  if (!ids.length) {
+    logDispatch("sent", { sent: 0, failed: 0 }, f, eligible);
+    toast("No eligible contacts to send.");
+    if (button) button.disabled = false; render(); return;
+  }
+  const chunks = [];
+  for (let i = 0; i < ids.length; i += drip.batch) chunks.push(ids.slice(i, i + drip.batch));
+  let sent = 0, failed = 0;
+  toast(`Drip started: ${ids.length} contacts · ${drip.batch}/batch every ${drip.everySec}s.`);
+  const summary = document.getElementById("aud-summary");
+  for (let b = 0; b < chunks.length; b++) {
+    const res = await api.dispatchSend({ workflowId: wfId, contactIds: chunks[b], day: msg.day });
+    if (res && res.error) failed += chunks[b].length;
+    else { sent += res && res.mock ? chunks[b].length : (res.sent || 0); failed += (res && res.failed) || 0; }
+    if (summary) summary.textContent = `Drip: ${sent}/${ids.length} sent…`;
+    if (b < chunks.length - 1) await new Promise((r) => setTimeout(r, drip.everySec * 1000));
+  }
+  recordSend(eligible);   // bump no-reply counters; auto-flag non-responders
+  persist();
+  logDispatch(failed > 0 ? "partially sent" : "sent", { sent, failed }, f, eligible);
+  toast(`Drip complete: ${sent} sent, ${failed} failed.`);
+  if (button) button.disabled = false;
+  location.hash = "#/logs";
+}
+
 /* ---------------- audience logic ---------------- */
 function applyFilters(contacts, f) {
   const ex = state.settings.excludedTags;
   return contacts.filter((c) => {
     // hard safety exclusions always
     if (c.status === "unsubscribed") return false;
+    if (isNonResponder(c)) return false; // never keep messaging non-responders (anti-spam)
     if (ex.some((t) => c.tags.includes(t))) return false;
     if (f.excludeOptout && c.tags.includes("weekly-messages-optout")) return false;
     if (f.excludePaused && c.tags.includes("weekly-messages-paused")) return false;
@@ -318,22 +373,33 @@ screens.dashboard = () => {
       <div class="sched__foot">
         ${d.offline
           ? `<button class="btn btn--soft btn--sm" data-act="resume" data-day="${d.day}">Enable</button>`
-          : `<a class="btn btn--primary btn--sm" href="#/dispatch?day=${d.day}">Open</a>
+          : `<button class="btn btn--primary btn--sm" data-open-day="${d.day}">Open</button>
              <button class="btn btn--ghost btn--sm" data-act="${ds.status === "paused" ? "resume" : "pause"}" data-day="${d.day}">${ds.status === "paused" ? "Resume" : "Pause"}</button>`}
       </div>
     </div>`;
   }).join("");
+  const flagged = nonResponders().length;
+  const openDay = state.ui.dayOpen;
+  const openDef = openDay && DAY_DEFS.find((d) => d.day === openDay);
   return `
     <div class="dash-top">
       <div><h1 class="section-title">This week</h1><p class="section-sub" style="margin:0">Which days send, at what time, and which message goes out.</p></div>
       <div class="dash-stats">
         <div class="ministat"><b>${activeContacts}</b><span>contacts</span></div>
         <div class="ministat"><b>${scheduledCount}</b><span>days set</span></div>
-        <div class="ministat"><b>${today.day.slice(0, 3)}</b><span>today</span></div>
+        <a class="ministat" href="#/logs" style="text-decoration:none"><b>${flagged}</b><span>no-reply</span></a>
       </div>
     </div>
     <div class="panel-title">Weekly schedule</div>
-    <div class="sched">${cells}</div>`;
+    <div class="sched">${cells}</div>
+    ${openDay && openDef && !openDef.offline ? `
+      <div class="daypanel">
+        <div class="daypanel__bar">
+          <div><strong>${openDay}</strong> · ${esc(openDef.theme)} — manage everything here</div>
+          <button class="btn btn--ghost btn--sm" data-close-day>Close</button>
+        </div>
+        ${dispatchPanels()}
+      </div>` : ""}`;
 };
 
 function dayCard(d) {
@@ -485,22 +551,17 @@ screens.audience = () => {
     </div>`;
 };
 
-/* ---- E) Dispatch Center ---- */
-screens.dispatch = (params) => {
-  const day = params.get("day");
-  if (day && !state.dispatch.messageId) {
-    const m = state.messages.find((x) => x.day === day && x.status !== "archived");
-    if (m) state.dispatch.messageId = m.id;
-  }
+/* ---- Reusable dispatch block: Message (+ quick edit) · Audience · Send ----
+   Used both on the Send tab and inline on the Dashboard day panel. */
+function dispatchPanels() {
   const msg = state.messages.find((m) => m.id === state.dispatch.messageId);
   const f = currentFilters();
-  const eligible = applyFilters(state.contacts, f);
-  const count = eligible.length;
+  const count = applyFilters(state.contacts, f).length;
   const offlineWarn = msg && msg.day === "Saturday";
   const opt = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option ${x === v ? "selected" : ""}>${esc(x)}</option>`).join("");
   const optF = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option value="${esc(x.key)}" ${x.key === v ? "selected" : ""}>${esc(x.name)}</option>`).join("");
+  const vars = VARIABLES.map((v) => `<button class="var-chip" data-var="${esc(v)}">${esc(v)}</button>`).join("");
   return `
-    <h1 class="section-title">Send</h1><p class="section-sub">Choose the message, pick who receives it, then send now or schedule. Every dispatch is logged.</p>
     <div class="split">
       <div class="card">
         <div class="panel-title">1 · Message</div>
@@ -508,7 +569,13 @@ screens.dispatch = (params) => {
           <option value="">— select —</option>
           ${state.messages.filter((m) => m.status !== "archived").map((m) => `<option value="${m.id}" ${m.id === state.dispatch.messageId ? "selected" : ""}>${esc(m.day)} · ${esc(m.title)}</option>`).join("")}
         </select></div>
-        ${msg ? `<div class="preview-phone"><div class="bubble">${esc(renderMessage(msg.body))}</div><div class="preview-meta">${esc(msg.channel)} · workflow: ${state.settings.workflows[msg.day] || "— (offline)"}</div></div>` : `<p class="muted">Select a message to preview it.</p>`}
+        ${msg ? `<div class="preview-phone"><div class="bubble">${esc(renderMessage(msg.body))}</div><div class="preview-meta">${esc(msg.channel)} · workflow: ${state.settings.workflows[msg.day] || "— (offline)"}</div></div>
+          <details class="advanced">
+            <summary>Edit this message</summary>
+            <div class="var-row">${vars}</div>
+            <textarea class="textarea" id="d-edit" rows="6">${esc(msg.body)}</textarea>
+            <button class="btn btn--soft btn--sm mt" id="d-edit-save">Save message</button>
+          </details>` : `<p class="muted">Select a message to preview it.</p>`}
         <div class="panel-title mt">2 · Who receives it</div>
         <div class="presets">${audiencePresets().map((pr, i) => `<button class="preset ${isPresetActive(pr, f) ? "is-active" : ""}" data-preset="${i}">${esc(pr.label)}</button>`).join("")}</div>
         <details class="advanced">
@@ -536,6 +603,7 @@ screens.dispatch = (params) => {
         <div class="panel-title">3 · Send</div>
         <div class="audience-count" id="aud-count">${count}</div>
         <p class="muted" id="aud-summary" style="font-size:.84rem">eligible after safety exclusions</p>
+        <div class="drip-note">🩸 Drip mode (always on): ${dripCfg().batch} per batch · every ${dripCfg().everySec}s</div>
         <div id="d-warn"></div>
         <div class="row mt" style="gap:10px">
           <button class="btn btn--soft" id="d-test" ${!msg ? "disabled" : ""}>Send test</button>
@@ -545,6 +613,16 @@ screens.dispatch = (params) => {
         <p class="muted mt" style="font-size:.78rem">Test sends to: ${esc(state.settings.testContact)}</p>
       </div>
     </div>`;
+}
+
+/* ---- Send tab ---- */
+screens.dispatch = (params) => {
+  const day = params.get("day");
+  if (day) {
+    const m = state.messages.find((x) => x.day === day && x.status !== "archived");
+    if (m) state.dispatch.messageId = m.id;
+  }
+  return `<h1 class="section-title">Send</h1><p class="section-sub">Choose the message, pick who receives it, then send now or schedule. Every dispatch is logged.</p>${dispatchPanels()}`;
 };
 
 /* ---- F) Logs ---- */
@@ -558,7 +636,13 @@ screens.logs = () => {
       <td>${fmtDT(l.when)}</td><td>${esc(l.user)}</td>
       <td><span class="pill ${statusClass(l.status)}">${l.status}</span></td>
     </tr>`).join("");
+  const nr = nonResponders();
   return `
+    ${nr.length ? `<div class="card mb">
+      <div class="panel-title">⚑ Non-responders auto-flagged <span class="pill pill--warn">${nr.length}</span></div>
+      <p class="muted mb" style="font-size:.82rem">These contacts received ${engCfg().flagAfter}+ messages without replying — they're tagged <strong>${esc(engCfg().flagTag)}</strong> and automatically excluded from sends to avoid being flagged as spam.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${nr.slice(0, 24).map((c) => `<span class="pill pill--muted">${esc(c.full_name || c.first_name || c.id)}</span>`).join("")}${nr.length > 24 ? `<span class="pill pill--muted">+${nr.length - 24} more</span>` : ""}</div>
+    </div>` : ""}
     <div class="row between mb"><div><h1 class="section-title" style="margin:0">Dispatch Logs</h1><p class="muted" style="font-size:.9rem">Every action is recorded for auditing.</p></div>
       <div class="row" style="gap:8px">
         <select class="select" id="log-status" style="width:auto"><option value="">All statuses</option>${["draft", "scheduled", "processing", "sent", "partially sent", "failed", "cancelled"].map((s) => `<option>${s}</option>`).join("")}</select>
@@ -593,6 +677,15 @@ screens.settings = () => {
         ${times}
       </div>
       <div class="card">
+        <div class="panel-title">Drip mode <span class="pill pill--accent">always on</span></div>
+        <p class="muted mb" style="font-size:.82rem">Dispatches always go out gradually, never all at once — protects deliverability and avoids spam flags.</p>
+        <div class="row" style="gap:12px">
+          <div class="field" style="flex:1"><label>Contacts per batch</label><input class="input" type="number" min="1" id="set-drip-batch" value="${(s.drip || { batch: 20 }).batch}"></div>
+          <div class="field" style="flex:1"><label>Seconds between batches</label><input class="input" type="number" min="1" id="set-drip-every" value="${(s.drip || { everySec: 30 }).everySec}"></div>
+        </div>
+        <div class="field" style="margin-bottom:0"><label>Flag non-responders after N sends (auto-excludes them)</label><input class="input" type="number" min="1" id="set-flagafter" value="${(s.engagement || { flagAfter: 3 }).flagAfter}"></div>
+      </div>
+      <div class="card">
         <div class="panel-title">Excluded tags (safety)</div>
         ${state.tags.map((t) => `<div class="checkline"><input type="checkbox" data-extag="${esc(t)}" ${s.excludedTags.includes(t) ? "checked" : ""}><label>${esc(t)}</label></div>`).join("")}
         <div class="field mt"><label>Test contact (email/phone)</label><input class="input" id="set-test" value="${esc(s.testContact)}"></div>
@@ -615,9 +708,20 @@ function wire(route, params) {
   // dashboard / generic day pause-resume
   root.querySelectorAll("[data-act='pause'],[data-act='resume']").forEach((b) => b.onclick = () => {
     const day = b.dataset.day;
-    state.dayState[day].status = b.dataset.act === "pause" ? "paused" : "ready";
+    state.dayState[day].status = b.dataset.act === "pause" ? "paused" : "scheduled";
     persist(); toast(`${day} ${b.dataset.act === "pause" ? "paused" : "resumed"}.`); render();
   });
+
+  // dashboard: open a day's full management panel inline
+  root.querySelectorAll("[data-open-day]").forEach((b) => b.onclick = () => {
+    const day = b.dataset.openDay;
+    const m = state.messages.find((x) => x.day === day && x.status !== "archived");
+    state.dispatch.messageId = m ? m.id : null;
+    state.ui.dayOpen = day; render();
+    document.querySelector(".daypanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  const closeDay = root.querySelector("[data-close-day]");
+  closeDay && (closeDay.onclick = () => { state.ui.dayOpen = null; render(); });
 
   if (route === "library") {
     root.querySelectorAll("[data-act='new']").forEach((b) => b.onclick = () => {
@@ -686,7 +790,7 @@ function wire(route, params) {
     });
   }
 
-  if (route === "dispatch") {
+  function wireDispatch() {
     const msgSel = $("#d-msg");
     msgSel && (msgSel.onchange = () => { state.dispatch.messageId = msgSel.value || null; render(); });
     const msg = state.messages.find((m) => m.id === state.dispatch.messageId);
@@ -723,6 +827,22 @@ function wire(route, params) {
     });
     if (!msg) return;
 
+    // quick inline message edit (same as the Messages tab)
+    const editArea = $("#d-edit");
+    if (editArea) {
+      const bubble = root.querySelector(".preview-phone .bubble");
+      const upd = () => { if (bubble) bubble.textContent = renderMessage(editArea.value); };
+      editArea.addEventListener("input", upd);
+      root.querySelectorAll(".var-chip").forEach((c) => c.onclick = () => {
+        const v = c.dataset.var, s = editArea.selectionStart ?? editArea.value.length;
+        editArea.value = editArea.value.slice(0, s) + v + editArea.value.slice(s); editArea.focus(); upd();
+      });
+      $("#d-edit-save") && ($("#d-edit-save").onclick = () => {
+        msg.body = editArea.value; msg.version += 1; msg.edited = new Date().toISOString();
+        persist(); toast("Message saved."); render();
+      });
+    }
+
     const logDispatch = (status, res, f, eligible) => {
       state.logs.unshift({
         id: res.dispatchId || uid("DSP"), day: msg.day, title: msg.title, filters: filtersSummary(f),
@@ -747,21 +867,15 @@ function wire(route, params) {
         logDispatch("scheduled", res || {}, f, eligible); toast("Dispatch scheduled."); render();
       }});
     });
+    const drip = dripCfg();
     const send = $("#d-send"); send && (send.onclick = () => {
       const f = readFilters(), eligible = eligibleNow(), wfId = state.settings.workflows[msg.day];
       modal({
-        title: "Confirm dispatch",
-        warn: !wfId ? "No workflow mapped for this day (set it in Settings)." : (eligible.length > 250 ? `High volume: ${eligible.length} contacts.` : (!f.tag && !f.field && !f.pipeline && !f.source ? "No filter selected — entire eligible base." : "")),
-        body: `You are about to send <strong>${esc(msg.title)}</strong> to <strong>${eligible.length}</strong> contacts via <strong>${esc(wfId || "—")}</strong>.<br>This action cannot be undone. Confirm dispatch?`,
-        confirmLabel: "Send now", onConfirm: async () => {
-          send.disabled = true;
-          const res = await api.dispatchSend({ workflowId: wfId, contactIds: eligible.map((c) => c.id), day: msg.day });
-          send.disabled = false;
-          if (res && res.error) { toast("Dispatch failed: " + res.error, true); logDispatch("failed", { sent: 0, failed: eligible.length }, f, eligible); render(); return; }
-          const sent = res && res.mock ? eligible.length : (res.sent || 0);
-          const failed = (res && res.failed) || 0;
-          logDispatch(failed > 0 ? "partially sent" : "sent", { dispatchId: res.dispatchId, sent, failed, skipped: 0 }, f, eligible);
-          toast(`Dispatched: ${sent} sent, ${failed} failed.`); location.hash = "#/logs";
+        title: "Confirm dispatch (drip mode)",
+        warn: !wfId ? "No workflow mapped for this day (set it in Settings)." : (!f.tag && !f.field && !f.pipeline && !f.source ? "No filter selected — entire eligible base." : ""),
+        body: `You are about to send <strong>${esc(msg.title)}</strong> to <strong>${eligible.length}</strong> contacts via <strong>${esc(wfId || "—")}</strong>.<br><br>Drip mode is always on: messages go out in batches of <strong>${drip.batch}</strong> every <strong>${drip.everySec}s</strong> to protect deliverability.<br>This cannot be undone. Confirm?`,
+        confirmLabel: "Start drip", onConfirm: async () => {
+          await dripSend({ msg, wfId, eligible, f, logDispatch, button: send });
         }
       });
     });
@@ -795,11 +909,17 @@ function wire(route, params) {
       root.querySelectorAll("[data-time]").forEach((i) => state.settings.defaultTimes[i.dataset.time] = i.value);
       root.querySelectorAll("[data-fm]").forEach((i) => state.settings.fieldMap[i.dataset.fm] = i.value.trim());
       state.settings.excludedTags = [...root.querySelectorAll("[data-extag]:checked")].map((i) => i.dataset.extag);
-      if (!state.settings.excludedTags.includes("weekly-messages-optout")) state.settings.excludedTags.push("weekly-messages-optout");
       state.settings.testContact = $("#set-test").value.trim();
+      const batch = parseInt($("#set-drip-batch").value, 10), every = parseInt($("#set-drip-every").value, 10);
+      state.settings.drip = { batch: batch > 0 ? batch : 20, everySec: every > 0 ? every : 30 };
+      const flagAfter = parseInt($("#set-flagafter").value, 10);
+      state.settings.engagement = { flagAfter: flagAfter > 0 ? flagAfter : 3, flagTag: engCfg().flagTag };
       persist(); toast("Settings saved."); render();
     });
   }
+
+  // the dispatch block lives on both the Send tab and the Dashboard day panel
+  if ($("#d-msg")) wireDispatch();
 }
 
 /* ============================================================

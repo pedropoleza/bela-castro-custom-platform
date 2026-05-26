@@ -86,6 +86,10 @@ h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
 .topnav a.is-active { color: var(--accent); border-bottom-color: var(--accent); }
 
 .topbar__right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: none; }
+.lang-toggle { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 100px; border: 1px solid var(--line); background: var(--card-2); color: var(--muted); cursor: pointer; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.04em; }
+.lang-toggle:hover { border-color: var(--accent); }
+.lang-toggle .sep { opacity: 0.4; }
+.lang-toggle [data-l].on { color: var(--accent); }
 .avatar {
   width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
   background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--on-accent);

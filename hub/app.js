@@ -11,6 +11,9 @@
    ============================================================ */
 
 /* ---------------- helpers ---------------- */
+// language: pt-BR by default, switchable to English (whole UI)
+let LANG = (localStorage.getItem("iwh_lang") === "en") ? "en" : "pt";
+const t = (pt, en) => (LANG === "en" ? en : pt);
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = (p = "id") => p + "_" + Math.random().toString(36).slice(2, 9);
@@ -39,6 +42,18 @@ const DAY_DEFS = [
   { day: "Saturday", theme: "Offline Presence Day", objective: "Rest, presence and real connection — no message sent by default.", offline: true },
   { day: "Sunday", theme: "Reset & Preparation", objective: "Prepare emotionally and mentally for the new week with structure." }
 ];
+
+const DAY_PT = {
+  Monday: { short: "Seg", theme: "Motivação & Mentalidade" },
+  Tuesday: { short: "Ter", theme: "Treine-se" },
+  Wednesday: { short: "Qua", theme: "Dica de Wellness" },
+  Thursday: { short: "Qui", theme: "Gratidão & Consciência" },
+  Friday: { short: "Sex", theme: "Curiosidade Wellness" },
+  Saturday: { short: "Sáb", theme: "Dia Offline" },
+  Sunday: { short: "Dom", theme: "Reset & Preparação" }
+};
+const dayShort = (day) => LANG === "pt" ? DAY_PT[day].short : day.slice(0, 3);
+const dayTheme = (d) => LANG === "pt" ? DAY_PT[d.day].theme : d.theme;
 
 const VARIABLES = [
   "{{contact.first_name}}", "{{contact.full_name}}", "{{contact.email}}",
@@ -311,9 +326,9 @@ const filtersSummary = (f) => {
 // practical one-click audience presets built from the real location tags
 function audiencePresets() {
   const has = (x) => state.tags.includes(x);
-  const P = [{ label: "Everyone", filters: {} }];
-  [["cliente-ativa", "Active clients"], ["idioma-pt", "Portuguese"], ["idioma-en", "English"],
-   ["vip", "VIP"], ["cliente-inativa", "Inactive"], ["weekly-messages-active", "Weekly active"]
+  const P = [{ label: t("Todos", "Everyone"), filters: {} }];
+  [["cliente-ativa", t("Clientes ativas", "Active clients")], ["idioma-pt", t("Português", "Portuguese")], ["idioma-en", t("Inglês", "English")],
+   ["vip", "VIP"], ["cliente-inativa", t("Inativas", "Inactive")], ["weekly-messages-active", t("Semanal ativo", "Weekly active")]
   ].forEach(([tag, label]) => { if (has(tag)) P.push({ label, filters: { tag } }); });
   return P;
 }
@@ -341,7 +356,8 @@ function toast(msg, bad = false) {
   $("#toastRoot").appendChild(t);
   setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateY(8px)"; t.style.transition = "all .3s"; setTimeout(() => t.remove(), 300); }, 3200);
 }
-function modal({ title, body, warn, confirmLabel = "Confirm", danger, onConfirm }) {
+function modal({ title, body, warn, confirmLabel, danger, onConfirm }) {
+  confirmLabel = confirmLabel || t("Confirmar", "Confirm");
   const root = $("#modalRoot");
   root.innerHTML = `
     <div class="modal-overlay" role="dialog" aria-modal="true">
@@ -350,7 +366,7 @@ function modal({ title, body, warn, confirmLabel = "Confirm", danger, onConfirm 
         ${warn ? `<div class="modal__warn">${esc(warn)}</div>` : ""}
         <p>${body}</p>
         <div class="modal__actions">
-          <button class="btn btn--ghost" data-x>Cancel</button>
+          <button class="btn btn--ghost" data-x>${esc(t("Cancelar", "Cancel"))}</button>
           <button class="btn ${danger ? "btn--danger" : "btn--primary"}" data-ok>${esc(confirmLabel)}</button>
         </div>
       </div>
@@ -365,12 +381,12 @@ function modal({ title, body, warn, confirmLabel = "Confirm", danger, onConfirm 
    SCREENS
    ============================================================ */
 const icon = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
-const NAV = [
-  { id: "dashboard", label: "Dashboard", ic: icon('<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>') },
-  { id: "library", label: "Messages", ic: icon('<path d="M4 5h16M4 12h16M4 19h10"/>') },
-  { id: "dispatch", label: "Send", ic: icon('<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/>') },
-  { id: "logs", label: "Logs", ic: icon('<path d="M8 6h12M8 12h12M8 18h12M3 6h.01M3 12h.01M3 18h.01"/>') },
-  { id: "settings", label: "Settings", ic: icon('<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 0 0-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 0 0-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.3-1a7 7 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7 7 0 0 0 1.7-1l2.3 1 2-3.5-2-1.5a7 7 0 0 0 .1-1Z"/>') }
+const NAV = () => [
+  { id: "dashboard", label: t("Painel", "Dashboard"), ic: icon('<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>') },
+  { id: "library", label: t("Mensagens", "Messages"), ic: icon('<path d="M4 5h16M4 12h16M4 19h10"/>') },
+  { id: "dispatch", label: t("Enviar", "Send"), ic: icon('<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/>') },
+  { id: "logs", label: t("Histórico", "Logs"), ic: icon('<path d="M8 6h12M8 12h12M8 18h12M3 6h.01M3 12h.01M3 18h.01"/>') },
+  { id: "settings", label: t("Config.", "Settings"), ic: icon('<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.3 1a7 7 0 0 0-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 0 0-1.7 1l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.3-1a7 7 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7 7 0 0 0 1.7-1l2.3 1 2-3.5-2-1.5a7 7 0 0 0 .1-1Z"/>') }
 ];
 
 const screens = {};
@@ -385,18 +401,18 @@ screens.dashboard = () => {
     const ds = state.dayState[d.day];
     const time = state.settings.defaultTimes[d.day];
     const msg = state.messages.find((m) => m.day === d.day && m.status !== "archived");
-    const label = d.offline ? "Offline" : (ds.status === "paused" ? "Paused" : (ds.status === "scheduled" ? "Will send" : ds.status));
+    const label = d.offline ? t("Folga", "Offline") : (ds.status === "paused" ? t("Pausado", "Paused") : (ds.status === "scheduled" ? t("Vai enviar", "Will send") : ds.status));
     return `<div class="sched__day ${d.offline ? "is-offline" : ""} ${(!d.offline && ds.status === "scheduled") ? "is-on" : ""}">
-      <div class="sched__head"><span class="sched__dow">${d.day.slice(0, 3)}</span><span class="sched__time">${d.offline ? "—" : (time || "—")}</span></div>
+      <div class="sched__head"><span class="sched__dow">${dayShort(d.day)}</span><span class="sched__time">${d.offline ? "—" : (time || "—")}</span></div>
       <span class="pill ${statusClass(d.offline ? "paused" : ds.status)}">${label}</span>
       ${d.offline
-        ? `<div class="sched__msg">Rest day — no message sent.</div>`
-        : `<div class="sched__theme">${esc(d.theme)}</div><div class="sched__msg">${msg ? "✉ " + esc(msg.title) : "no message picked"}</div>`}
+        ? `<div class="sched__msg">${t("Dia de descanso — sem envio.", "Rest day — no message sent.")}</div>`
+        : `<div class="sched__theme">${esc(dayTheme(d))}</div><div class="sched__msg">${msg ? "✉ " + esc(msg.title) : t("sem mensagem", "no message picked")}</div>`}
       <div class="sched__foot">
         ${d.offline
-          ? `<button class="btn btn--soft btn--sm" data-act="resume" data-day="${d.day}">Enable</button>`
-          : `<button class="btn btn--primary btn--sm" data-open-day="${d.day}">Open</button>
-             <button class="btn btn--ghost btn--sm" data-act="${ds.status === "paused" ? "resume" : "pause"}" data-day="${d.day}">${ds.status === "paused" ? "Resume" : "Pause"}</button>`}
+          ? `<button class="btn btn--soft btn--sm" data-act="resume" data-day="${d.day}">${t("Ativar", "Enable")}</button>`
+          : `<button class="btn btn--primary btn--sm" data-open-day="${d.day}">${t("Abrir", "Open")}</button>
+             <button class="btn btn--ghost btn--sm" data-act="${ds.status === "paused" ? "resume" : "pause"}" data-day="${d.day}">${ds.status === "paused" ? t("Retomar", "Resume") : t("Pausar", "Pause")}</button>`}
       </div>
     </div>`;
   }).join("");
@@ -405,20 +421,20 @@ screens.dashboard = () => {
   const openDef = openDay && DAY_DEFS.find((d) => d.day === openDay);
   return `
     <div class="dash-top">
-      <div><h1 class="section-title">This week</h1><p class="section-sub" style="margin:0">Which days send, at what time, and which message goes out.</p></div>
+      <div><h1 class="section-title">${t("Esta semana", "This week")}</h1><p class="section-sub" style="margin:0">${t("Quais dias enviam, em que horário e qual mensagem vai.", "Which days send, at what time, and which message goes out.")}</p></div>
       <div class="dash-stats">
-        <div class="ministat"><b>${activeContacts}</b><span>contacts</span></div>
-        <div class="ministat"><b>${scheduledCount}</b><span>days set</span></div>
-        <a class="ministat" href="#/logs" style="text-decoration:none"><b>${flagged}</b><span>no-reply</span></a>
+        <div class="ministat"><b>${activeContacts}</b><span>${t("contatos", "contacts")}</span></div>
+        <div class="ministat"><b>${scheduledCount}</b><span>${t("dias ativos", "days set")}</span></div>
+        <a class="ministat" href="#/logs" style="text-decoration:none"><b>${flagged}</b><span>${t("sem resposta", "no-reply")}</span></a>
       </div>
     </div>
-    <div class="panel-title">Weekly schedule</div>
+    <div class="panel-title">${t("Agenda da semana", "Weekly schedule")}</div>
     <div class="sched">${cells}</div>
     ${openDay && openDef && !openDef.offline ? `
       <div class="daypanel">
         <div class="daypanel__bar">
-          <div><strong>${openDay}</strong> · ${esc(openDef.theme)} — manage everything here</div>
-          <button class="btn btn--ghost btn--sm" data-close-day>Close</button>
+          <div><strong>${esc(openDay)}</strong> · ${esc(dayTheme(openDef))} — ${t("gerencie tudo aqui", "manage everything here")}</div>
+          <button class="btn btn--ghost btn--sm" data-close-day>${t("Fechar", "Close")}</button>
         </div>
         ${dispatchPanels()}
       </div>` : ""}`;
@@ -479,18 +495,18 @@ screens.library = (params) => {
           <div class="muted" style="font-size:.8rem">${m.channel} · v${m.version} · edited ${fmtDate(m.edited)}</div>
         </div>
         <div class="row" style="gap:6px">
-          <a class="btn btn--soft btn--sm" href="#/library?edit=${m.id}">Edit</a>
-          <button class="btn btn--ghost btn--sm" data-act="duplicate" data-id="${m.id}">Duplicate</button>
-          <button class="btn btn--ghost btn--sm" data-act="usedispatch" data-id="${m.id}">Use in dispatch</button>
-          <button class="btn btn--ghost btn--sm" data-act="archive" data-id="${m.id}">Archive</button>
+          <a class="btn btn--soft btn--sm" href="#/library?edit=${m.id}">${t("Editar", "Edit")}</a>
+          <button class="btn btn--ghost btn--sm" data-act="duplicate" data-id="${m.id}">${t("Duplicar", "Duplicate")}</button>
+          <button class="btn btn--ghost btn--sm" data-act="usedispatch" data-id="${m.id}">${t("Usar no envio", "Use in dispatch")}</button>
+          <button class="btn btn--ghost btn--sm" data-act="archive" data-id="${m.id}">${t("Arquivar", "Archive")}</button>
         </div>
-      </div>`).join("") : `<p class="muted mb">No messages yet for ${dn}.</p>`;
+      </div>`).join("") : `<p class="muted mb">${t("Nenhuma mensagem para", "No messages yet for")} ${dn}.</p>`;
     return `<div class="card mb">
-      <div class="row between mb"><div><h3 style="font-family:var(--display)">${dn} — ${esc(def.theme)}</h3><span class="muted" style="font-size:.82rem">${esc(def.objective)}</span></div>
-      ${def.offline ? `<span class="pill pill--muted">Offline day</span>` : `<button class="btn btn--soft btn--sm" data-act="new" data-day="${dn}">+ New message</button>`}</div>
+      <div class="row between mb"><div><h3 style="font-family:var(--display)">${dn} — ${esc(dayTheme(def))}</h3><span class="muted" style="font-size:.82rem">${esc(def.objective)}</span></div>
+      ${def.offline ? `<span class="pill pill--muted">${t("Dia offline", "Offline day")}</span>` : `<button class="btn btn--soft btn--sm" data-act="new" data-day="${dn}">+ ${t("Nova mensagem", "New message")}</button>`}</div>
       ${rows}</div>`;
   }).join("");
-  return `<h1 class="section-title">Message Library</h1><p class="section-sub">Create and manage message variations for each weekday. ${day ? `Filtered to <strong>${esc(day)}</strong> · <a href="#/library" style="color:var(--accent)">show all</a>` : "Use placeholders to personalize each message."}</p>${groups}`;
+  return `<h1 class="section-title">${t("Mensagens", "Message Library")}</h1><p class="section-sub">${t("Crie e gerencie variações de mensagem para cada dia.", "Create and manage message variations for each weekday.")} ${day ? `${t("Filtrado por", "Filtered to")} <strong>${esc(day)}</strong> · <a href="#/library" style="color:var(--accent)">${t("ver todas", "show all")}</a>` : t("Use variáveis para personalizar cada mensagem.", "Use placeholders to personalize each message.")}</p>${groups}`;
 };
 
 function messageEditor(id) {
@@ -586,53 +602,53 @@ function dispatchPanels() {
   return `
     <div class="split">
       <div class="card">
-        <div class="panel-title">1 · Message</div>
-        <div class="field"><label>Choose message</label><select class="select" id="d-msg">
-          <option value="">— select —</option>
+        <div class="panel-title">1 · ${t("Mensagem", "Message")}</div>
+        <div class="field"><label>${t("Escolha a mensagem", "Choose message")}</label><select class="select" id="d-msg">
+          <option value="">— ${t("selecione", "select")} —</option>
           ${state.messages.filter((m) => m.status !== "archived").map((m) => `<option value="${m.id}" ${m.id === state.dispatch.messageId ? "selected" : ""}>${esc(m.day)} · ${esc(m.title)}</option>`).join("")}
         </select></div>
         ${msg ? `<div class="preview-phone"><div class="bubble">${esc(renderMessage(msg.body))}</div><div class="preview-meta">${esc(msg.channel)} · workflow: ${state.settings.workflows[msg.day] || "— (offline)"}</div></div>
           <details class="advanced">
-            <summary>Edit this message</summary>
+            <summary>${t("Editar esta mensagem", "Edit this message")}</summary>
             <div class="var-row">${vars}</div>
             <textarea class="textarea" id="d-edit" rows="6">${esc(msg.body)}</textarea>
-            <button class="btn btn--soft btn--sm mt" id="d-edit-save">Save message</button>
-          </details>` : `<p class="muted">Select a message to preview it.</p>`}
-        <div class="panel-title mt">2 · Who receives it</div>
+            <button class="btn btn--soft btn--sm mt" id="d-edit-save">${t("Salvar mensagem", "Save message")}</button>
+          </details>` : `<p class="muted">${t("Selecione uma mensagem para visualizar.", "Select a message to preview it.")}</p>`}
+        <div class="panel-title mt">2 · ${t("Quem recebe", "Who receives it")}</div>
         <div class="presets">${audiencePresets().map((pr, i) => `<button class="preset ${isPresetActive(pr, f) ? "is-active" : ""}" data-preset="${i}">${esc(pr.label)}</button>`).join("")}</div>
         <details class="advanced">
-          <summary>Advanced filters</summary>
+          <summary>${t("Filtros avançados", "Advanced filters")}</summary>
           <div class="filter-row">
-            <div class="field" style="margin:0"><label>Has tag</label><select class="select" id="f-tag">${opt(state.tags, f.tag)}</select></div>
-            <div class="field" style="margin:0"><label>Without tag</label><select class="select" id="f-withoutTag">${opt(state.tags, f.withoutTag)}</select></div>
+            <div class="field" style="margin:0"><label>${t("Com a tag", "Has tag")}</label><select class="select" id="f-tag">${opt(state.tags, f.tag)}</select></div>
+            <div class="field" style="margin:0"><label>${t("Sem a tag", "Without tag")}</label><select class="select" id="f-withoutTag">${opt(state.tags, f.withoutTag)}</select></div>
             <span></span>
           </div>
           <div class="filter-row">
-            <div class="field" style="margin:0"><label>Custom field</label><select class="select" id="f-field">${optF(state.customFields, f.field)}</select></div>
-            <div class="field" style="margin:0"><label>Field value equals</label><input class="input" id="f-fieldValue" value="${esc(f.fieldValue)}" placeholder="e.g. Português"></div>
+            <div class="field" style="margin:0"><label>${t("Campo personalizado", "Custom field")}</label><select class="select" id="f-field">${optF(state.customFields, f.field)}</select></div>
+            <div class="field" style="margin:0"><label>${t("Valor do campo igual a", "Field value equals")}</label><input class="input" id="f-fieldValue" value="${esc(f.fieldValue)}" placeholder="${t("ex: Português", "e.g. Português")}"></div>
             <span></span>
           </div>
           <div class="filter-row">
-            <div class="field" style="margin:0"><label>Pipeline stage</label><select class="select" id="f-pipeline">${opt(["Lead", "Onboarding", "Active Client", "Renewal"], f.pipeline)}</select></div>
-            <div class="field" style="margin:0"><label>Source</label><select class="select" id="f-source">${opt(["Instagram", "Referral", "Ad", "Organic"], f.source)}</select></div>
+            <div class="field" style="margin:0"><label>${t("Etapa do funil", "Pipeline stage")}</label><select class="select" id="f-pipeline">${opt(["Lead", "Onboarding", "Active Client", "Renewal"], f.pipeline)}</select></div>
+            <div class="field" style="margin:0"><label>${t("Origem", "Source")}</label><select class="select" id="f-source">${opt(["Instagram", "Referral", "Ad", "Organic"], f.source)}</select></div>
             <span></span>
           </div>
-          <div class="checkline"><input type="checkbox" id="f-optout" ${f.excludeOptout ? "checked" : ""}><label for="f-optout">Exclude opt-out contacts (always on)</label></div>
-          <div class="checkline"><input type="checkbox" id="f-paused" ${f.excludePaused ? "checked" : ""}><label for="f-paused">Exclude paused contacts</label></div>
+          <div class="checkline"><input type="checkbox" id="f-optout" ${f.excludeOptout ? "checked" : ""}><label for="f-optout">${t("Excluir quem deu opt-out (sempre ativo)", "Exclude opt-out contacts (always on)")}</label></div>
+          <div class="checkline"><input type="checkbox" id="f-paused" ${f.excludePaused ? "checked" : ""}><label for="f-paused">${t("Excluir contatos pausados", "Exclude paused contacts")}</label></div>
         </details>
       </div>
       <div class="card card--glass">
-        <div class="panel-title">3 · Send</div>
+        <div class="panel-title">3 · ${t("Enviar", "Send")}</div>
         <div class="audience-count" id="aud-count">${count}</div>
-        <p class="muted" id="aud-summary" style="font-size:.84rem">eligible after safety exclusions</p>
-        <div class="drip-note">🩸 Drip mode (always on): ${dripCfg().batch} per batch · every ${dripCfg().everySec}s · via ${state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow"}</div>
+        <p class="muted" id="aud-summary" style="font-size:.84rem">${t("elegíveis após exclusões de segurança", "eligible after safety exclusions")}</p>
+        <div class="drip-note">🩸 ${t("Modo drip (sempre ativo)", "Drip mode (always on)")}: ${dripCfg().batch}/${t("lote", "batch")} · ${t("a cada", "every")} ${dripCfg().everySec}s · via ${state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow"}</div>
         <div id="d-warn"></div>
         <div class="row mt" style="gap:10px">
-          <button class="btn btn--soft" id="d-test" ${!msg ? "disabled" : ""}>Send test</button>
-          <button class="btn btn--ghost" id="d-schedule" ${!msg ? "disabled" : ""}>Schedule</button>
-          <button class="btn btn--primary" id="d-send" ${!msg || offlineWarn ? "disabled" : ""}>Send now</button>
+          <button class="btn btn--soft" id="d-test" ${!msg ? "disabled" : ""}>${t("Testar", "Send test")}</button>
+          <button class="btn btn--ghost" id="d-schedule" ${!msg ? "disabled" : ""}>${t("Agendar", "Schedule")}</button>
+          <button class="btn btn--primary" id="d-send" ${!msg || offlineWarn ? "disabled" : ""}>${t("Enviar agora", "Send now")}</button>
         </div>
-        <p class="muted mt" style="font-size:.78rem">Test sends to: ${esc(state.settings.testContact)}</p>
+        <p class="muted mt" style="font-size:.78rem">${t("Teste envia para", "Test sends to")}: ${esc(state.settings.testContact)}</p>
       </div>
     </div>`;
 }
@@ -644,7 +660,7 @@ screens.dispatch = (params) => {
     const m = state.messages.find((x) => x.day === day && x.status !== "archived");
     if (m) state.dispatch.messageId = m.id;
   }
-  return `<h1 class="section-title">Send</h1><p class="section-sub">Choose the message, pick who receives it, then send now or schedule. Every dispatch is logged.</p>${dispatchPanels()}`;
+  return `<h1 class="section-title">${t("Enviar", "Send")}</h1><p class="section-sub">${t("Escolha a mensagem, defina quem recebe e envie ou agende. Tudo fica registrado.", "Choose the message, pick who receives it, then send now or schedule. Every dispatch is logged.")}</p>${dispatchPanels()}`;
 };
 
 /* ---- F) Logs ---- */
@@ -661,11 +677,11 @@ screens.logs = () => {
   const nr = nonResponders();
   return `
     ${nr.length ? `<div class="card mb">
-      <div class="panel-title">⚑ Non-responders auto-flagged <span class="pill pill--warn">${nr.length}</span></div>
-      <p class="muted mb" style="font-size:.82rem">These contacts received ${engCfg().flagAfter}+ messages without replying — they're tagged <strong>${esc(engCfg().flagTag)}</strong> and automatically excluded from sends to avoid being flagged as spam.</p>
-      <div class="row" style="gap:6px;flex-wrap:wrap">${nr.slice(0, 24).map((c) => `<span class="pill pill--muted">${esc(c.full_name || c.first_name || c.id)}</span>`).join("")}${nr.length > 24 ? `<span class="pill pill--muted">+${nr.length - 24} more</span>` : ""}</div>
+      <div class="panel-title">⚑ ${t("Não-respondentes (auto-flag)", "Non-responders auto-flagged")} <span class="pill pill--warn">${nr.length}</span></div>
+      <p class="muted mb" style="font-size:.82rem">${t(`Receberam ${engCfg().flagAfter}+ mensagens sem responder — foram marcados com`, `Received ${engCfg().flagAfter}+ messages without replying — tagged`)} <strong>${esc(engCfg().flagTag)}</strong> ${t("e são excluídos automaticamente dos envios (anti-spam).", "and automatically excluded from sends to avoid spam.")}</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${nr.slice(0, 24).map((c) => `<span class="pill pill--muted">${esc(c.full_name || c.first_name || c.id)}</span>`).join("")}${nr.length > 24 ? `<span class="pill pill--muted">+${nr.length - 24} ${t("mais", "more")}</span>` : ""}</div>
     </div>` : ""}
-    <div class="row between mb"><div><h1 class="section-title" style="margin:0">Dispatch Logs</h1><p class="muted" style="font-size:.9rem">Every action is recorded for auditing.</p></div>
+    <div class="row between mb"><div><h1 class="section-title" style="margin:0">${t("Histórico de envios", "Dispatch Logs")}</h1><p class="muted" style="font-size:.9rem">${t("Toda ação fica registrada para auditoria.", "Every action is recorded for auditing.")}</p></div>
       <div class="row" style="gap:8px">
         <select class="select" id="log-status" style="width:auto"><option value="">All statuses</option>${["draft", "scheduled", "processing", "sent", "partially sent", "failed", "cancelled"].map((s) => `<option>${s}</option>`).join("")}</select>
         <button class="btn btn--soft btn--sm" id="log-export">Export CSV</button>
@@ -686,7 +702,7 @@ screens.settings = () => {
   const fields = Object.entries(s.fieldMap).map(([k, v]) => `
     <div class="field"><label>${k}</label><input class="input" data-fm="${k}" value="${esc(v)}"></div>`).join("");
   return `
-    <h1 class="section-title">Settings</h1><p class="section-sub">Map weekday workflows, default times, excluded tags, custom fields and the test contact. API credentials live on the backend — never in this frontend.</p>
+    <h1 class="section-title">${t("Configurações", "Settings")}</h1><p class="section-sub">${t("Workflows por dia, horários, canal de envio, drip, tags excluídas e contato de teste. As credenciais ficam no servidor — nunca no navegador.", "Map weekday workflows, default times, sending channel, drip, excluded tags and the test contact. API credentials live on the backend — never in this frontend.")}</p>
     <div class="split">
       <div class="card">
         <div class="panel-title">Workflow / webhook mapping</div>
@@ -966,7 +982,8 @@ function render() {
   $("#modalRoot").innerHTML = "";
   const view = screens[route] || screens.dashboard;
   $("#screen").innerHTML = view(params);
-  $("#nav").querySelectorAll("a").forEach((a) => a.classList.toggle("is-active", a.dataset.route === route));
+  $("#nav").innerHTML = NAV().map((n) => `<a href="#/${n.id}" data-route="${n.id}" class="${n.id === route ? "is-active" : ""}">${n.ic}<span>${n.label}</span></a>`).join("");
+  $("#langToggle") && $("#langToggle").querySelectorAll("[data-l]").forEach((s) => s.classList.toggle("on", s.dataset.l === LANG));
   window.scrollTo(0, 0);
   wire(route, params);
 }
@@ -974,7 +991,8 @@ function render() {
 /* ---------------- init ---------------- */
 function init() {
   // build nav
-  $("#nav").innerHTML = NAV.map((n) => `<a href="#/${n.id}" data-route="${n.id}">${n.ic}<span>${n.label}</span></a>`).join("");
+  const lt = $("#langToggle");
+  lt && (lt.onclick = () => { LANG = LANG === "en" ? "pt" : "en"; localStorage.setItem("iwh_lang", LANG); render(); });
   window.addEventListener("hashchange", render);
   render();                                  // instant paint (seed data)
   loadLive().then(render);                   // refresh with real GoHighLevel data

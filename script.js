@@ -8,6 +8,19 @@
   const root = document.documentElement;
   const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /* ---------- WHATSAPP CONFIG ----------
+     TODO: replace WHATSAPP with the real number — digits only, including the
+     country code (e.g. Brazil: "55" + DDD + number). No spaces or symbols.    */
+  const WHATSAPP = "5500000000000";
+  const waLink = (msg) => "https://wa.me/" + WHATSAPP + (msg ? "?text=" + encodeURIComponent(msg) : "");
+  const heroMsg = () => root.getAttribute("lang") === "en"
+    ? "Hi! I'd love to know more about the Vida Bela Club."
+    : "Olá! Gostaria de saber mais sobre o Vida Bela Club.";
+  function refreshWaLinks() {
+    const l = waLink(heroMsg());
+    ["waHero", "waFloat"].forEach((id) => { const el = document.getElementById(id); if (el) el.setAttribute("href", l); });
+  }
+
   /* ---------- THEME ---------- */
   const toggle = document.getElementById("themeToggle");
   const stored = localStorage.getItem("vb-theme");
@@ -33,8 +46,8 @@
     "hero.badge": { en: "Vida Bela Club" },
     "hero.title": { en: "Shape the Lifestyle You Deserve" },
     "hero.sub": { en: "Empowering women to build a life of freedom, confidence, and fulfillment — through mental discipline, physical wellbeing, and emotional resilience." },
-    "hero.cta1": { en: "Begin the journey" },
-    "hero.cta2": { en: "See the weekly rhythm" },
+    "hero.cta1": { en: "Chat on WhatsApp" },
+    "hero.cta2": { en: "I want to join" },
     "hero.scroll": { en: "Begin the journey" },
 
     "vision.eyebrow": { en: "Our Vision" },
@@ -232,7 +245,18 @@
     "foot.col3": { en: "Start now" },
     "foot.copy": { en: "© 2026 Vida Bela. All rights reserved." },
     "foot.privacy": { en: "Privacy" },
-    "foot.terms": { en: "Terms" }
+    "foot.terms": { en: "Terms" },
+    "join.eyebrow": { en: "Start now" },
+    "join.title": { en: "Take the first step" },
+    "join.lead": { en: "Fill this in and continue the conversation on WhatsApp — we'll help you begin your journey." },
+    "join.name": { en: "Your name" },
+    "join.email": { en: "Email (optional)" },
+    "join.goal": { en: "Your main focus" },
+    "join.goal1": { en: "Mindset & discipline" },
+    "join.goal2": { en: "Physical wellbeing" },
+    "join.goal3": { en: "Emotional balance" },
+    "join.goal4": { en: "Full transformation" },
+    "join.submit": { en: "Continue on WhatsApp" }
   };
 
   // capture original PT text once so we can restore it
@@ -250,6 +274,7 @@
     });
     root.setAttribute("lang", lang);
     localStorage.setItem("vb-lang", lang);
+    refreshWaLinks();
     const lt = document.getElementById("langToggle");
     if (lt) lt.querySelectorAll("[data-lang-label]").forEach((s) => {
       s.classList.toggle("is-active", s.dataset.langLabel === lang);
@@ -265,6 +290,21 @@
       const opt = e.target.closest("[data-lang-label]");
       const next = opt ? opt.dataset.langLabel : (root.getAttribute("lang") === "en" ? "pt" : "en");
       applyLang(next);
+    });
+  }
+
+  /* ---------- JOIN FORM -> WhatsApp ---------- */
+  const joinForm = document.getElementById("joinForm");
+  if (joinForm) {
+    joinForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const en = root.getAttribute("lang") === "en";
+      const val = (s) => { const el = joinForm.querySelector(`[name="${s}"]`); return el ? el.value.trim() : ""; };
+      const name = val("name"), email = val("email"), goal = val("goal");
+      const msg = en
+        ? `Hi! My name is ${name || "—"}. Main focus: ${goal}.${email ? " Email: " + email + "." : ""} I'd like to join the Vida Bela Club.`
+        : `Olá! Meu nome é ${name || "—"}. Foco principal: ${goal}.${email ? " E-mail: " + email + "." : ""} Quero participar do Vida Bela Club.`;
+      window.open(waLink(msg), "_blank");
     });
   }
 
@@ -767,6 +807,34 @@
   window.addEventListener("scroll", onTrailScroll, { passive: true });
   window.addEventListener("resize", updateTrail);
   updateTrail();
+
+  /* ---------- GUIDED SCROLL to the form — the vine draws along, smoothly ---------- */
+  const easeIO = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+  function guidedScrollTo(targetEl, dur) {
+    const startY = window.scrollY;
+    const endY = Math.max(0, targetEl.getBoundingClientRect().top + window.scrollY - 70);
+    const dist = endY - startY;
+    if (Math.abs(dist) < 4) return;
+    const prevBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";        // avoid fighting CSS smooth-scroll
+    const t0p = performance.now();
+    function step(now) {
+      const k = Math.min(1, (now - t0p) / dur);
+      window.scrollTo(0, startY + dist * easeIO(k));
+      drawVine(); updateTrail();               // the branch guides the descent
+      if (k < 1) requestAnimationFrame(step);
+      else root.style.scrollBehavior = prevBehavior;
+    }
+    requestAnimationFrame(step);
+  }
+  document.querySelectorAll(".js-to-form").forEach((a) => {
+    a.addEventListener("click", (e) => {
+      const t = document.getElementById("join");
+      if (!t) return;
+      e.preventDefault();
+      guidedScrollTo(t, 1500);
+    });
+  });
 
   // FALLING PETALS — drifting free of the branch
   const petalfall = document.getElementById("petalfall");

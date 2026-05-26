@@ -583,6 +583,56 @@ section[id] { scroll-margin-top: 86px; }
 }
 .btn--ghost:active { transform: translateY(-1px); }
 
+/* WhatsApp button */
+.btn--wa { background: #1faa55; color: #fff; box-shadow: 0 16px 40px -16px rgba(31, 170, 85, 0.6); }
+.btn--wa:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 26px 56px -18px rgba(31, 170, 85, 0.72); }
+.btn--wa:active { transform: translateY(-1px) scale(0.99); }
+.wa-ico { width: 1.25em; height: 1.25em; }
+
+/* floating WhatsApp shortcut */
+.wa-float {
+  position: fixed; right: 22px; bottom: 22px; z-index: 60;
+  width: 58px; height: 58px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: #1faa55; color: #fff;
+  box-shadow: 0 14px 34px -8px rgba(31, 170, 85, 0.7);
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+.wa-float svg { width: 30px; height: 30px; }
+.wa-float::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(31, 170, 85, 0.45);
+  animation: waPulse 2.6s ease-out infinite;
+}
+.wa-float:hover { transform: scale(1.08); }
+@keyframes waPulse {
+  0% { box-shadow: 0 0 0 0 rgba(31, 170, 85, 0.45); }
+  70% { box-shadow: 0 0 0 16px rgba(31, 170, 85, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(31, 170, 85, 0); }
+}
+
+/* JOIN form */
+.join { padding: 44px 0 60px; }
+.join-form {
+  max-width: 540px; margin: 0 auto; padding: 0 24px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.join-field { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.join-field label { font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-soft); font-weight: 600; }
+.join-field input, .join-field select {
+  width: 100%; padding: 13px 16px; border-radius: 12px;
+  border: 1px solid var(--card-brd); background: var(--card-bg);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  color: var(--text); font-family: var(--font-body); font-size: 0.96rem;
+  transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+.join-field input:focus, .join-field select:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.join-field select option { color: #1a1f16; }
+.join-submit { margin-top: 8px; align-self: center; }
+
 /* ============================================================
    HERO
    ============================================================ */
@@ -660,6 +710,9 @@ section[id] { scroll-margin-top: 86px; }
     repeating-linear-gradient(180deg, rgba(0,0,0,0.07) 0 5px, rgba(255,255,255,0.04) 5px 12px),
     linear-gradient(90deg, #5c4329 0%, #8a6843 45%, #6b4f34 100%);
   box-shadow: 0 0 0 1px rgba(0,0,0,0.18), inset -1.5px 0 2px rgba(0,0,0,0.3), inset 1.5px 0 1px rgba(255,255,255,0.14);
+  /* soft-fade the ends so the trunk doesn't look flat/cut off */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 7%, #000 90%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 7%, #000 90%, transparent 100%);
 }
 /* a progress line that fills as you climb through the days */
 .trail__progress {

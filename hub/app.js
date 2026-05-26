@@ -286,10 +286,8 @@ function dayCard(d) {
       <div class="daycard__meta"><span>Last sent<br><b>${fmtDate(ds.lastSent)}</b></span><span style="text-align:right">Eligible<br><b>${offline ? "—" : ds.eligible}</b></span></div>
       <div class="daycard__actions">
         ${offline
-          ? `<button class="btn btn--soft btn--sm" data-act="resume" data-day="${d.day}">Enable day</button>
-             <span class="muted" style="font-size:.76rem;align-self:center">No message sent on Saturday</span>`
-          : `<a class="btn btn--soft btn--sm" href="#/library?day=${d.day}">Edit message</a>
-             <a class="btn btn--ghost btn--sm" href="#/dispatch?day=${d.day}">Audience &amp; send</a>
+          ? `<button class="btn btn--soft btn--sm" data-act="resume" data-day="${d.day}">Enable day</button>`
+          : `<a class="btn btn--primary btn--sm" href="#/dispatch?day=${d.day}">Open day →</a>
              <button class="btn btn--ghost btn--sm" data-act="${ds.status === "paused" ? "resume" : "pause"}" data-day="${d.day}">${ds.status === "paused" ? "Resume" : "Pause"}</button>`}
       </div>
     </div>`;

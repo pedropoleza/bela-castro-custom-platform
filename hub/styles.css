@@ -3,8 +3,8 @@
    ============================================================ */
 /* default theme = GoHighLevel style (white background, blue layout) */
 :root {
-  --font: "Manrope", system-ui, sans-serif;
-  --display: "Fraunces", Georgia, serif;
+  --font: "Inter", system-ui, -apple-system, sans-serif;
+  --display: "Inter", system-ui, sans-serif;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   --bg: #eef1f6;
@@ -19,8 +19,8 @@
   --good: #2bb673;
   --warn: #e0a23b;
   --bad: #e0584b;
-  --shadow: 0 18px 44px -28px rgba(30, 55, 100, 0.35);
-  --radius: 14px;
+  --shadow: 0 1px 2px rgba(30, 55, 100, 0.06), 0 6px 18px -12px rgba(30, 55, 100, 0.18);
+  --radius: 10px;
   --on-accent: #ffffff;
 
   /* blue/navy sidebar like GoHighLevel */
@@ -125,8 +125,8 @@ h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
 }
 
 /* ---------- generic bits ---------- */
-.section-title { font-family: var(--display); font-size: 1.5rem; margin-bottom: 4px; }
-.section-sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 22px; max-width: 60ch; }
+.section-title { font-family: var(--display); font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 3px; }
+.section-sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 22px; max-width: 60ch; }
 .grid { display: grid; gap: 16px; }
 
 .card {
@@ -134,6 +134,7 @@ h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 18px;
+  box-shadow: var(--shadow);
 }
 .card--glass {
   background: color-mix(in srgb, var(--card) 70%, transparent);

@@ -232,6 +232,19 @@ const filtersSummary = (f) => {
   return parts.length ? parts.join("; ") : "no filter (all eligible)";
 };
 
+// practical one-click audience presets built from the real location tags
+function audiencePresets() {
+  const has = (x) => state.tags.includes(x);
+  const P = [{ label: "Everyone", filters: {} }];
+  [["cliente-ativa", "Active clients"], ["idioma-pt", "Portuguese"], ["idioma-en", "English"],
+   ["vip", "VIP"], ["cliente-inativa", "Inactive"], ["weekly-messages-active", "Weekly active"]
+  ].forEach(([tag, label]) => { if (has(tag)) P.push({ label, filters: { tag } }); });
+  return P;
+}
+const isPresetActive = (p, f) => p.filters.tag
+  ? f.tag === p.filters.tag
+  : (!f.tag && !f.withoutTag && !f.field && !f.pipeline && !f.source);
+
 /* ---------------- preview substitution ---------------- */
 function renderMessage(body, contact = SAMPLE_CONTACT) {
   return body
@@ -290,17 +303,37 @@ screens.dashboard = () => {
   const todayIdx = (new Date().getDay() + 6) % 7; // Mon=0
   const today = DAY_DEFS[todayIdx];
   const activeContacts = state.contacts.filter((c) => c.status === "active").length;
-  const scheduled = state.logs.filter((l) => l.status === "scheduled").length;
-  const cards = DAY_DEFS.map((d) => dayCard(d)).join("");
+  const scheduledCount = DAY_DEFS.filter((d) => state.dayState[d.day].status === "scheduled").length;
+  const cells = DAY_DEFS.map((d) => {
+    const ds = state.dayState[d.day];
+    const time = state.settings.defaultTimes[d.day];
+    const msg = state.messages.find((m) => m.day === d.day && m.status !== "archived");
+    const label = d.offline ? "Offline" : (ds.status === "paused" ? "Paused" : (ds.status === "scheduled" ? "Will send" : ds.status));
+    return `<div class="sched__day ${d.offline ? "is-offline" : ""} ${(!d.offline && ds.status === "scheduled") ? "is-on" : ""}">
+      <div class="sched__head"><span class="sched__dow">${d.day.slice(0, 3)}</span><span class="sched__time">${d.offline ? "—" : (time || "—")}</span></div>
+      <span class="pill ${statusClass(d.offline ? "paused" : ds.status)}">${label}</span>
+      ${d.offline
+        ? `<div class="sched__msg">Rest day — no message sent.</div>`
+        : `<div class="sched__theme">${esc(d.theme)}</div><div class="sched__msg">${msg ? "✉ " + esc(msg.title) : "no message picked"}</div>`}
+      <div class="sched__foot">
+        ${d.offline
+          ? `<button class="btn btn--soft btn--sm" data-act="resume" data-day="${d.day}">Enable</button>`
+          : `<a class="btn btn--primary btn--sm" href="#/dispatch?day=${d.day}">Open</a>
+             <button class="btn btn--ghost btn--sm" data-act="${ds.status === "paused" ? "resume" : "pause"}" data-day="${d.day}">${ds.status === "paused" ? "Resume" : "Pause"}</button>`}
+      </div>
+    </div>`;
+  }).join("");
   return `
-    <h1 class="section-title">This week</h1>
-    <p class="section-sub">Pick a day to review its message, choose who receives it and send.</p>
-    <div class="stat-row">
-      <div class="card stat"><div class="stat__label">Today</div><div class="stat__value" style="font-size:1.2rem">${today.theme}</div><div class="stat__hint">${today.day}${today.offline ? " · rest day" : ""}</div></div>
-      <div class="card stat"><div class="stat__label">Contacts</div><div class="stat__value">${activeContacts}</div><div class="stat__hint">able to receive</div></div>
-      <div class="card stat"><div class="stat__label">Scheduled</div><div class="stat__value">${scheduled}</div><div class="stat__hint">this week</div></div>
+    <div class="dash-top">
+      <div><h1 class="section-title">This week</h1><p class="section-sub" style="margin:0">Which days send, at what time, and which message goes out.</p></div>
+      <div class="dash-stats">
+        <div class="ministat"><b>${activeContacts}</b><span>contacts</span></div>
+        <div class="ministat"><b>${scheduledCount}</b><span>days set</span></div>
+        <div class="ministat"><b>${today.day.slice(0, 3)}</b><span>today</span></div>
+      </div>
     </div>
-    <div class="day-grid">${cards}</div>`;
+    <div class="panel-title">Weekly schedule</div>
+    <div class="sched">${cells}</div>`;
 };
 
 function dayCard(d) {
@@ -477,23 +510,27 @@ screens.dispatch = (params) => {
         </select></div>
         ${msg ? `<div class="preview-phone"><div class="bubble">${esc(renderMessage(msg.body))}</div><div class="preview-meta">${esc(msg.channel)} · workflow: ${state.settings.workflows[msg.day] || "— (offline)"}</div></div>` : `<p class="muted">Select a message to preview it.</p>`}
         <div class="panel-title mt">2 · Who receives it</div>
-        <div class="filter-row">
-          <div class="field" style="margin:0"><label>Has tag</label><select class="select" id="f-tag">${opt(state.tags, f.tag)}</select></div>
-          <div class="field" style="margin:0"><label>Without tag</label><select class="select" id="f-withoutTag">${opt(state.tags, f.withoutTag)}</select></div>
-          <span></span>
-        </div>
-        <div class="filter-row">
-          <div class="field" style="margin:0"><label>Custom field</label><select class="select" id="f-field">${optF(state.customFields, f.field)}</select></div>
-          <div class="field" style="margin:0"><label>Field value equals</label><input class="input" id="f-fieldValue" value="${esc(f.fieldValue)}" placeholder="e.g. Português"></div>
-          <span></span>
-        </div>
-        <div class="filter-row">
-          <div class="field" style="margin:0"><label>Pipeline stage</label><select class="select" id="f-pipeline">${opt(["Lead", "Onboarding", "Active Client", "Renewal"], f.pipeline)}</select></div>
-          <div class="field" style="margin:0"><label>Source</label><select class="select" id="f-source">${opt(["Instagram", "Referral", "Ad", "Organic"], f.source)}</select></div>
-          <span></span>
-        </div>
-        <div class="checkline"><input type="checkbox" id="f-optout" ${f.excludeOptout ? "checked" : ""}><label for="f-optout">Exclude opt-out contacts (always on)</label></div>
-        <div class="checkline"><input type="checkbox" id="f-paused" ${f.excludePaused ? "checked" : ""}><label for="f-paused">Exclude paused contacts</label></div>
+        <div class="presets">${audiencePresets().map((pr, i) => `<button class="preset ${isPresetActive(pr, f) ? "is-active" : ""}" data-preset="${i}">${esc(pr.label)}</button>`).join("")}</div>
+        <details class="advanced">
+          <summary>Advanced filters</summary>
+          <div class="filter-row">
+            <div class="field" style="margin:0"><label>Has tag</label><select class="select" id="f-tag">${opt(state.tags, f.tag)}</select></div>
+            <div class="field" style="margin:0"><label>Without tag</label><select class="select" id="f-withoutTag">${opt(state.tags, f.withoutTag)}</select></div>
+            <span></span>
+          </div>
+          <div class="filter-row">
+            <div class="field" style="margin:0"><label>Custom field</label><select class="select" id="f-field">${optF(state.customFields, f.field)}</select></div>
+            <div class="field" style="margin:0"><label>Field value equals</label><input class="input" id="f-fieldValue" value="${esc(f.fieldValue)}" placeholder="e.g. Português"></div>
+            <span></span>
+          </div>
+          <div class="filter-row">
+            <div class="field" style="margin:0"><label>Pipeline stage</label><select class="select" id="f-pipeline">${opt(["Lead", "Onboarding", "Active Client", "Renewal"], f.pipeline)}</select></div>
+            <div class="field" style="margin:0"><label>Source</label><select class="select" id="f-source">${opt(["Instagram", "Referral", "Ad", "Organic"], f.source)}</select></div>
+            <span></span>
+          </div>
+          <div class="checkline"><input type="checkbox" id="f-optout" ${f.excludeOptout ? "checked" : ""}><label for="f-optout">Exclude opt-out contacts (always on)</label></div>
+          <div class="checkline"><input type="checkbox" id="f-paused" ${f.excludePaused ? "checked" : ""}><label for="f-paused">Exclude paused contacts</label></div>
+        </details>
       </div>
       <div class="card card--glass">
         <div class="panel-title">3 · Send</div>
@@ -678,6 +715,12 @@ function wire(route, params) {
     $("#f-optout") && $("#f-optout").addEventListener("change", recount);
     $("#f-paused") && $("#f-paused").addEventListener("change", recount);
     recount();
+    // one-click audience presets
+    root.querySelectorAll("[data-preset]").forEach((b) => b.onclick = () => {
+      const pr = audiencePresets()[+b.dataset.preset];
+      state.dispatch.filters = { ...pr.filters, excludeOptout: true, excludePaused: true };
+      render();
+    });
     if (!msg) return;
 
     const logDispatch = (status, res, f, eligible) => {

@@ -50,17 +50,17 @@ ul { list-style: none; }
 h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
 
 /* ---------- layout ---------- */
-.app { min-height: 100%; display: flex; flex-direction: column; }
+.app { min-height: 100%; display: flex; flex-direction: column; padding-top: 58px; }
 
-/* ---------- top bar (brand + tabs + controls) ---------- */
+/* ---------- top bar (fixed) ---------- */
 .topbar {
-  position: sticky; top: 0; z-index: 30;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 40;
   display: flex; align-items: center; gap: 18px;
   padding: 0 clamp(14px, 3vw, 26px);
-  height: 60px;
-  background: color-mix(in srgb, var(--card) 92%, transparent);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  height: 58px;
+  background: var(--card);
   border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(30,55,100,0.04);
 }
 .brand { display: flex; align-items: center; gap: 11px; flex: none; }
 .brand__mark {
@@ -180,6 +180,38 @@ h1, h2, h3, h4 { line-height: 1.15; font-weight: 600; }
 
 /* ---------- weekly day cards ---------- */
 .day-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+
+/* dashboard top */
+.dash-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.dash-stats { display: flex; gap: 10px; }
+.ministat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; text-align: center; box-shadow: var(--shadow); }
+.ministat b { display: block; font-size: 1.25rem; font-weight: 700; line-height: 1.1; }
+.ministat span { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+
+/* weekly schedule map (calendar-like) */
+.sched { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+.sched__day { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 168px; box-shadow: var(--shadow); }
+.sched__day.is-on { border-top: 3px solid var(--accent); }
+.sched__day.is-offline { background: repeating-linear-gradient(135deg, var(--card) 0 9px, var(--card-2) 9px 18px); }
+.sched__head { display: flex; align-items: baseline; justify-content: space-between; }
+.sched__dow { font-weight: 700; font-size: 0.95rem; }
+.sched__time { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
+.sched__theme { font-size: 0.74rem; color: var(--accent); font-weight: 700; line-height: 1.2; }
+.sched__msg { font-size: 0.76rem; color: var(--muted); line-height: 1.35; }
+.sched__foot { display: flex; gap: 6px; margin-top: auto; }
+@media (max-width: 960px) { .sched { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 620px) { .sched { grid-template-columns: 1fr; } }
+
+/* audience presets (practical end-user targeting) */
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.preset { padding: 8px 14px; border-radius: 100px; border: 1px solid var(--line); background: var(--card-2); color: var(--text); cursor: pointer; font-size: 0.84rem; font-weight: 600; transition: background 0.2s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease); }
+.preset:hover { border-color: var(--accent); }
+.preset.is-active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+details.advanced { margin-top: 4px; border-top: 1px solid var(--line-2); padding-top: 8px; }
+details.advanced > summary { cursor: pointer; color: var(--muted); font-size: 0.82rem; font-weight: 600; padding: 4px 0; list-style: none; }
+details.advanced > summary::-webkit-details-marker { display: none; }
+details.advanced > summary::before { content: "⚙  "; }
+
 .daycard { position: relative; display: flex; flex-direction: column; gap: 10px; transition: transform 0.3s var(--ease), border-color 0.3s var(--ease); }
 .daycard:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
 .daycard__top { display: flex; align-items: center; justify-content: space-between; }

@@ -342,16 +342,43 @@
      A small sprig grows in above each section heading to demarcate sections,
      keeping the natural theme. Self-contained SVG — no external assets.      */
   (function plantSprigs() {
-    const leaf = (x, y, rot, s, d) =>
-      `<g transform="translate(${x} ${y}) rotate(${rot})"><path class="lm-leaf" style="--d:${d}" d="M0 0 C ${s*0.34} ${-s*0.3} ${s*0.18} ${-s*0.82} 0 ${-s} C ${-s*0.18} ${-s*0.82} ${-s*0.34} ${-s*0.3} 0 0 Z"/></g>`;
-    const sprig =
-      `<svg class="leaf-mark" viewBox="0 0 60 56" aria-hidden="true">` +
-      `<path class="lm-stem" d="M30 56 C 30 44 30 30 30 12"/>` +
-      leaf(30, 44, -52, 18, 0) + leaf(30, 44, 52, 18, 0) +
-      leaf(30, 33, -46, 15, 1) + leaf(30, 33, 46, 15, 1) +
-      leaf(30, 23, -40, 12, 2) + leaf(30, 23, 40, 12, 2) +
-      `<circle class="lm-bud" cx="30" cy="11" r="5"/></svg>`;
-    document.querySelectorAll(".section-head").forEach((h) => h.insertAdjacentHTML("afterbegin", sprig));
+    const leafD = (s) => `M0 0 C ${s*0.34} ${-s*0.3} ${s*0.18} ${-s*0.82} 0 ${-s} C ${-s*0.18} ${-s*0.82} ${-s*0.34} ${-s*0.3} 0 0 Z`;
+    const petalD = (s) => `M0 0 C ${s*0.4} ${-s*0.35} ${s*0.25} ${-s*0.9} 0 ${-s} C ${-s*0.25} ${-s*0.9} ${-s*0.4} ${-s*0.35} 0 0 Z`;
+    const leaf = (x, y, rot, s, d) => `<g transform="translate(${x} ${y}) rotate(${rot})"><path class="lm-leaf" style="--d:${d}" d="${leafD(s)}"/></g>`;
+    const topFlower = (cx, cy, s, d) => {
+      let o = "";
+      for (let i = 0; i < 5; i++) o += `<g transform="translate(${cx} ${cy}) rotate(${i * 72})"><path class="lm-petal" style="--d:${d}" d="${petalD(s)}"/></g>`;
+      return o + `<circle class="lm-bud" cx="${cx}" cy="${cy}" r="${(s * 0.3).toFixed(1)}"/>`;
+    };
+    const topBud = (cx, cy, r) => `<circle class="lm-bud" cx="${cx}" cy="${cy}" r="${r}"/>`;
+    const topBerries = (cx, cy) => `<circle class="lm-bud" cx="${cx - 5}" cy="${cy + 2}" r="3.2"/><circle class="lm-bud" cx="${cx + 5}" cy="${cy + 2}" r="3.2"/><circle class="lm-bud" cx="${cx}" cy="${cy - 4}" r="3.2"/>`;
+
+    // a distinct sprig per section: varying leaf count, arrangement and crown
+    const conf = [
+      { pairs: 3, top: "bud", alt: false },
+      { pairs: 2, top: "flower", alt: false },
+      { pairs: 4, top: "berry", alt: true },
+      { pairs: 3, top: "flower", alt: false },
+      { pairs: 2, top: "bud", alt: true },
+      { pairs: 3, top: "berry", alt: false },
+      { pairs: 4, top: "flower", alt: true },
+      { pairs: 2, top: "bud", alt: true }
+    ];
+    const build = (i) => {
+      const c = conf[i % conf.length];
+      let body = `<path class="lm-stem" d="M30 56 C 30 44 30 30 30 12"/>`;
+      const ys = [46, 37, 28, 21].slice(0, c.pairs);
+      ys.forEach((y, k) => {
+        const s = 18 - k * 2.4;
+        if (c.alt) body += leaf(30, y, (k % 2 ? 1 : -1) * 50, s, k);
+        else body += leaf(30, y, -50, s, k) + leaf(30, y, 50, s, k);
+      });
+      if (c.top === "flower") body += topFlower(30, 13, 9, c.pairs);
+      else if (c.top === "berry") body += topBerries(30, 12);
+      else body += topBud(30, 11, 5);
+      return `<svg class="leaf-mark" viewBox="0 0 60 56" aria-hidden="true">${body}</svg>`;
+    };
+    document.querySelectorAll(".section-head").forEach((h, i) => h.insertAdjacentHTML("afterbegin", build(i)));
   })();
 
   /* ---------- FLUID LIGHT BACKGROUND (canvas) ----------

@@ -233,7 +233,7 @@ main > section { position: relative; z-index: 1; }
 .vine__strand--front { fill: url(#vineGrad); }
 .vine__strand--back { fill: var(--vine-dark); opacity: 0.85; }
 .vine__branchGlow { fill: var(--vine-glow); filter: blur(10px); opacity: 0.8; }
-.vine__sway { transform-box: view-box; transform-origin: left top; animation: vineBreeze 9s ease-in-out infinite; }
+.vine__sway { /* leaves stay fixed once bloomed (no drifting) */ }
 @keyframes vineBreeze {
   0%, 100% { transform: translateX(0) rotate(0deg); }
   50% { transform: translateX(6px) rotate(0.2deg); }
@@ -265,7 +265,7 @@ main > section { position: relative; z-index: 1; }
   transform-origin: 50% 100%;
   transition: opacity 0.7s var(--ease), scale 0.9s var(--ease);
 }
-.vine__leaf.bloom { opacity: 0.95; scale: 1; animation: leafSway 6s ease-in-out infinite; }
+.vine__leaf.bloom { opacity: 0.95; scale: 1; }
 .vine__vein { stroke: var(--vine-dark); stroke-width: 1; opacity: 0.4; fill: none; }
 
 /* station marker where the branch meets each section */
@@ -310,7 +310,7 @@ main > section { position: relative; z-index: 1; }
   transform-origin: center;
   transition: opacity 0.8s var(--ease), scale 1s var(--ease);
 }
-.vine__flower.bloom { opacity: 1; scale: 1; animation: flowerBreathe 7s ease-in-out infinite; }
+.vine__flower.bloom { opacity: 1; scale: 1; }
 .vine__flower .petal { fill: url(#flowerGrad); stroke: #a8746c; stroke-width: 0.4; stroke-opacity: 0.3; }
 .vine__flower .petal--inner { fill: #f0ddd0; stroke: none; opacity: 0.92; }
 .vine__flower .core { fill: #e7c98e; }
@@ -493,6 +493,13 @@ section[id] { scroll-margin-top: 86px; }
   transition: opacity 0.5s var(--ease), scale 0.6s var(--ease);
   transition-delay: calc(0.2s + var(--d, 0) * 0.1s);
 }
+.leaf-mark .lm-petal {
+  fill: url(#flowerGrad);
+  opacity: 0; scale: 0;
+  transform-box: fill-box; transform-origin: 50% 100%;
+  transition: opacity 0.5s var(--ease), scale 0.6s var(--ease);
+  transition-delay: calc(0.2s + var(--d, 0) * 0.1s);
+}
 .leaf-mark .lm-bud {
   fill: #d8a99d;
   opacity: 0; scale: 0;
@@ -500,7 +507,8 @@ section[id] { scroll-margin-top: 86px; }
   transition: opacity 0.5s var(--ease) 0.7s, scale 0.6s var(--ease) 0.7s;
 }
 .section-head.is-visible .lm-stem { stroke-dashoffset: 0; }
-.section-head.is-visible .lm-leaf { opacity: 0.95; scale: 1; animation: leafSway 6s ease-in-out infinite; animation-delay: 1s; }
+.section-head.is-visible .lm-leaf,
+.section-head.is-visible .lm-petal { opacity: 0.95; scale: 1; }
 .section-head.is-visible .lm-bud { opacity: 1; scale: 1; }
 
 .eyebrow {

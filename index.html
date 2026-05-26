@@ -58,11 +58,26 @@
     <svg class="vine" id="vine" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <clipPath id="vineClip"><rect id="vineClipRect" x="0" y="0" width="100%" height="0" /></clipPath>
+        <linearGradient id="vineGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop class="vg0" offset="0" /><stop class="vg1" offset="0.5" /><stop class="vg2" offset="1" />
+        </linearGradient>
+        <radialGradient id="leafGrad" cx="0.38" cy="0.18" r="0.9">
+          <stop class="lg0" offset="0" /><stop class="lg1" offset="1" />
+        </radialGradient>
+        <radialGradient id="flowerGrad" cx="0.5" cy="0.5" r="0.6">
+          <stop class="fg0" offset="0" /><stop class="fg1" offset="0.65" /><stop class="fg2" offset="1" />
+        </radialGradient>
+        <filter id="vineShadow" x="-40%" y="-10%" width="180%" height="120%">
+          <feDropShadow dx="1.5" dy="2.5" stdDeviation="2.4" flood-color="#16210d" flood-opacity="0.34" />
+        </filter>
       </defs>
       <g clip-path="url(#vineClip)">
         <path class="vine__branchGlow" id="vineBranchGlow" />
-        <path class="vine__branch" id="vineBranch" />
-        <g class="vine__sway" id="vineLeaves"></g>
+        <g filter="url(#vineShadow)">
+          <path class="vine__strand vine__strand--back" id="vineStrandB" />
+          <path class="vine__strand vine__strand--front" id="vineStrandA" />
+          <g class="vine__sway" id="vineLeaves"></g>
+        </g>
       </g>
     </svg>
     <!-- ---------- 1. HERO ---------- -->

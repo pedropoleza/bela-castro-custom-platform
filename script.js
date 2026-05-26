@@ -341,7 +341,8 @@
      and leaves/buds along it bloom as the drawing tip passes them.          */
   const SVGNS = "http://www.w3.org/2000/svg";
   const vineSvg = document.getElementById("vine");
-  const vineBranch = document.getElementById("vineBranch");
+  const vineStrandA = document.getElementById("vineStrandA");
+  const vineStrandB = document.getElementById("vineStrandB");
   const vineGlow = document.getElementById("vineBranchGlow");
   const vineClipRect = document.getElementById("vineClipRect");
   const leavesG = document.getElementById("vineLeaves");
@@ -369,6 +370,15 @@
         `M0 0 C ${(s*0.62).toFixed(1)} ${(-s*0.5).toFixed(1)}, ${(s*0.5).toFixed(1)} ${(-s*1.45).toFixed(1)}, 0 ${(-s*1.95).toFixed(1)} ` +
         `C ${(-s*0.5).toFixed(1)} ${(-s*1.45).toFixed(1)}, ${(-s*0.62).toFixed(1)} ${(-s*0.5).toFixed(1)}, 0 0 Z`);
       shape.setAttribute("class", "vine__leaf");
+      g.appendChild(shape);
+      // central vein for a more realistic leaf
+      const vein = document.createElementNS(SVGNS, "path");
+      vein.setAttribute("d", `M0 -2 C ${(s*0.12).toFixed(1)} ${(-s*0.7).toFixed(1)}, ${(s*0.12).toFixed(1)} ${(-s*1.3).toFixed(1)}, 0 ${(-s*1.85).toFixed(1)}`);
+      vein.setAttribute("class", "vine__vein");
+      g.appendChild(vein);
+      leavesG.appendChild(g);
+      leafEls.push({ y: cy, el: shape });
+      return;
     }
     g.appendChild(shape);
     leavesG.appendChild(g);
@@ -388,26 +398,45 @@
     const g = document.createElementNS(SVGNS, "g");
     g.setAttribute("transform", `translate(${cx.toFixed(1)} ${cy.toFixed(1)})`);
     g.setAttribute("class", "vine__flower");
+    // outer ring of 5 petals
     for (let i = 0; i < 5; i++) {
       const e = document.createElementNS(SVGNS, "ellipse");
       e.setAttribute("cx", "0"); e.setAttribute("cy", (-size).toFixed(1));
-      e.setAttribute("rx", (size * 0.42).toFixed(1)); e.setAttribute("ry", (size * 0.82).toFixed(1));
-      e.setAttribute("class", "petal");
+      e.setAttribute("rx", (size * 0.46).toFixed(1)); e.setAttribute("ry", (size * 0.95).toFixed(1));
+      e.setAttribute("class", "petal petal--outer");
       e.setAttribute("transform", `rotate(${i * 72})`);
       g.appendChild(e);
     }
+    // inner ring, offset, smaller
+    for (let i = 0; i < 5; i++) {
+      const e = document.createElementNS(SVGNS, "ellipse");
+      e.setAttribute("cx", "0"); e.setAttribute("cy", (-size * 0.58).toFixed(1));
+      e.setAttribute("rx", (size * 0.28).toFixed(1)); e.setAttribute("ry", (size * 0.58).toFixed(1));
+      e.setAttribute("class", "petal petal--inner");
+      e.setAttribute("transform", `rotate(${i * 72 + 36})`);
+      g.appendChild(e);
+    }
     const c = document.createElementNS(SVGNS, "circle");
-    c.setAttribute("r", (size * 0.4).toFixed(1)); c.setAttribute("class", "core");
+    c.setAttribute("r", (size * 0.32).toFixed(1)); c.setAttribute("class", "core");
     g.appendChild(c);
+    // stamen dots
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2;
+      const sd = document.createElementNS(SVGNS, "circle");
+      sd.setAttribute("cx", (Math.cos(a) * size * 0.18).toFixed(1));
+      sd.setAttribute("cy", (Math.sin(a) * size * 0.18).toFixed(1));
+      sd.setAttribute("r", (size * 0.07).toFixed(1));
+      sd.setAttribute("class", "stamen");
+      g.appendChild(sd);
+    }
     leavesG.appendChild(g);
     leafEls.push({ y: cy, el: g });
   }
 
-  // build a filled, tapering branch outline from a centerline
-  function branchPath(W, H) {
-    const pts = [{ x: W * 0.02, y: -34 }];
-    for (let y = 0; y <= H; y += 16) pts.push({ x: vineX(y, W), y });
-    const wBase = 17, wTip = 3.2;
+  // build a filled, tapering outline from any centerline function cxFn(y)
+  function tapered(cxFn, startX, H, wBase, wTip) {
+    const pts = [{ x: startX, y: -34 }];
+    for (let y = 0; y <= H; y += 14) pts.push({ x: cxFn(y), y });
     const left = [], right = [];
     for (let i = 0; i < pts.length; i++) {
       const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
@@ -426,7 +455,7 @@
   }
 
   function buildVine() {
-    if (!vineSvg || !vineBranch) return;
+    if (!vineSvg || !vineStrandA) return;
     const W = document.documentElement.clientWidth;
     const H = document.documentElement.scrollHeight;
     docH = H;
@@ -435,9 +464,15 @@
     vineSvg.setAttribute("height", H);
     if (vineClipRect) { vineClipRect.setAttribute("width", W); }
 
-    const d = branchPath(W, H);
-    vineBranch.setAttribute("d", d);
-    vineGlow.setAttribute("d", d);
+    // two strands weave around the main axis -> a braided branch
+    const braidAmp = 13, braidFreq = 0.022;
+    const aX = (y) => vineX(y, W) + Math.sin(y * braidFreq) * braidAmp;
+    const bX = (y) => vineX(y, W) - Math.sin(y * braidFreq) * braidAmp;
+    const dA = tapered(aX, W * 0.02 + braidAmp, H, 10, 2.6);
+    const dB = tapered(bX, W * 0.02 - braidAmp, H, 10, 2.6);
+    vineStrandA.setAttribute("d", dA);
+    vineStrandB.setAttribute("d", dB);
+    vineGlow.setAttribute("d", tapered((y) => vineX(y, W), W * 0.02, H, 26, 6));
 
     leavesG.innerHTML = "";
     leafEls.length = 0;
@@ -494,17 +529,17 @@
   const petalfall = document.getElementById("petalfall");
   if (petalfall) {
     const tones = ["#cf9a72", "#d98a86", "#9bb094", "#c4b07a"];
-    const n = window.innerWidth < 600 ? 9 : 18;
+    const n = window.innerWidth < 600 ? 4 : 7;
     for (let i = 0; i < n; i++) {
       const s = document.createElement("span");
       s.className = "petal-fall";
-      const size = 6 + Math.random() * 9;
+      const size = 7 + Math.random() * 8;
       s.style.left = (Math.random() * 100).toFixed(1) + "%";
       s.style.width = size.toFixed(1) + "px";
       s.style.height = (size * 1.25).toFixed(1) + "px";
       s.style.background = tones[i % tones.length];
-      s.style.animationDuration = (10 + Math.random() * 11).toFixed(1) + "s";
-      s.style.animationDelay = (-Math.random() * 20).toFixed(1) + "s";
+      s.style.animationDuration = (22 + Math.random() * 16).toFixed(1) + "s";
+      s.style.animationDelay = (-Math.random() * 30).toFixed(1) + "s";
       petalfall.appendChild(s);
     }
   }
@@ -580,27 +615,6 @@
   let vh = window.innerHeight;
   const t0 = performance.now();
 
-  // sections that get scroll-linked depth ("coming out of the screen")
-  const depthSecs = Array.from(document.querySelectorAll("main > section"));
-
-  /* ---------- INTENSE MULTI-LAYER PARALLAX ----------
-     Decorative, non-reveal/non-tilt elements drift vertically at different
-     speeds relative to the viewport, so the whole page reads with depth.    */
-  const pxItems = [];
-  const regPx = (sel, speed) =>
-    document.querySelectorAll(sel).forEach((el) => pxItems.push({ el, speed }));
-  regPx(".section-head .eyebrow", 0.10);
-  regPx(".section-head h2", 0.16);
-  regPx(".section-head p", 0.08);
-  regPx(".lottie-accent", 0.22);
-  regPx(".day__index", 0.34);
-  regPx(".card__n", 0.14);
-  regPx(".phase__n", 0.20);
-  regPx(".ripple-step__n", 0.18);
-  regPx(".hero__title", 0.14);
-  regPx(".hero__sub", 0.09);
-  regPx(".badge", 0.18);
-
   function updateTargets() {
     const p = scrollY / vh; // pages scrolled
     // Intensified ~2x: pointer drives stronger rotation + lateral slide;
@@ -638,29 +652,6 @@
       const y = -((t / dur) % 1) * 140;             // slow rise
       const x = Math.sin(t * 0.4 + ph) * 12;        // gentle sway
       m.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z}px) scale(${ds.toFixed(3)})`;
-    }
-
-    // section depth: rise from the back when below center, push toward the
-    // viewer and fade as they scroll up past center — fluid "out of screen"
-    for (let i = 0; i < depthSecs.length; i++) {
-      const sec = depthSecs[i];
-      const r = sec.getBoundingClientRect();
-      if (r.bottom < -300 || r.top > vh + 300) continue; // skip off-screen
-      let dd = (r.top + r.height / 2 - vh / 2) / vh;
-      dd = Math.max(-1.5, Math.min(1.5, dd));
-      const tz = -dd * 320;                 // intensified depth
-      const op = dd < -0.5 ? Math.max(0.15, 1 - (-dd - 0.5) * 1.2) : 1;
-      sec.style.transform = `translateZ(${tz.toFixed(1)}px)`;
-      sec.style.opacity = op.toFixed(3);
-    }
-
-    // multi-layer element parallax
-    for (let i = 0; i < pxItems.length; i++) {
-      const it = pxItems[i];
-      const r = it.el.getBoundingClientRect();
-      if (r.bottom < -200 || r.top > vh + 200) continue;
-      const off = (r.top + r.height / 2) - vh / 2;
-      it.el.style.transform = `translate3d(0, ${(-off * it.speed).toFixed(1)}px, 0)`;
     }
 
     requestAnimationFrame(loop); // motes drift continuously, so always loop

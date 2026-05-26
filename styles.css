@@ -30,6 +30,8 @@
   --clay: #b07a55;
   --accent: var(--forest);
   --vine: #54663f;
+  --vine-dark: #39482c;
+  --vine-light: #768b4f;
   --vine-glow: rgba(84, 102, 63, 0.28);
 
   --card-bg: rgba(252, 250, 244, 0.62);
@@ -60,6 +62,8 @@
   --clay: #cf9a72;
   --accent: var(--sage);
   --vine: #8ba074;
+  --vine-dark: #5d6e44;
+  --vine-light: #a6bb80;
   --vine-glow: rgba(139, 160, 116, 0.3);
 
   --card-bg: rgba(26, 32, 22, 0.55);
@@ -195,7 +199,7 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    THE VINE — branch that threads the page & draws on scroll
    ============================================================ */
-main { position: relative; perspective: 1600px; }
+main { position: relative; }
 .vine {
   position: absolute;
   top: 0; left: 0;
@@ -204,14 +208,21 @@ main { position: relative; perspective: 1600px; }
   pointer-events: none;
   overflow: visible;
 }
-/* sections sit forward of the vine and get scroll-linked depth (set in JS):
-   they rise from the back as they approach, then push toward the viewer and
-   recede as they scroll past — the "coming out of the screen" feel */
-main > section { position: relative; z-index: 1; transform-origin: center 42%; will-change: transform, opacity; }
+main > section { position: relative; z-index: 1; }
 
-/* the branch is a filled, tapering shape (realistic) revealed via clip */
-.vine__branch { fill: var(--vine); opacity: 0.9; }
-.vine__branchGlow { fill: var(--vine-glow); filter: blur(9px); opacity: 0.85; }
+/* two tapering strands twist into a braided, shaded branch (revealed via clip) */
+#vineGrad .vg0 { stop-color: var(--vine-dark); }
+#vineGrad .vg1 { stop-color: var(--vine-light); }
+#vineGrad .vg2 { stop-color: var(--vine-dark); }
+#leafGrad .lg0 { stop-color: var(--vine-light); }
+#leafGrad .lg1 { stop-color: var(--vine-dark); }
+#flowerGrad .fg0 { stop-color: #f6d2c8; }
+#flowerGrad .fg1 { stop-color: #de9b93; }
+#flowerGrad .fg2 { stop-color: #bf7873; }
+
+.vine__strand--front { fill: url(#vineGrad); }
+.vine__strand--back { fill: var(--vine-dark); opacity: 0.85; }
+.vine__branchGlow { fill: var(--vine-glow); filter: blur(10px); opacity: 0.8; }
 .vine__sway { transform-box: view-box; transform-origin: left top; animation: vineBreeze 9s ease-in-out infinite; }
 @keyframes vineBreeze {
   0%, 100% { transform: translateX(0) rotate(0deg); }
@@ -237,14 +248,15 @@ main > section { position: relative; z-index: 1; transform-origin: center 42%; w
 /* leaves use individual transform props so idle sway (rotate) can run
    independently of the bloom (scale) transition */
 .vine__leaf {
-  fill: var(--vine);
+  fill: url(#leafGrad);
   opacity: 0;
   scale: 0;
   transform-box: fill-box;
   transform-origin: 50% 100%;
   transition: opacity 0.7s var(--ease), scale 0.9s var(--ease);
 }
-.vine__leaf.bloom { opacity: 0.9; scale: 1; animation: leafSway 6s ease-in-out infinite; }
+.vine__leaf.bloom { opacity: 0.95; scale: 1; animation: leafSway 6s ease-in-out infinite; }
+.vine__vein { stroke: var(--vine-dark); stroke-width: 1; opacity: 0.4; fill: none; }
 
 .vine__twig {
   fill: none;
@@ -276,8 +288,10 @@ main > section { position: relative; z-index: 1; transform-origin: center 42%; w
   transition: opacity 0.8s var(--ease), scale 1s var(--ease);
 }
 .vine__flower.bloom { opacity: 1; scale: 1; animation: flowerBreathe 7s ease-in-out infinite; }
-.vine__flower .petal { fill: var(--bloom-petal, #d98a86); }
-.vine__flower .core { fill: var(--clay); }
+.vine__flower .petal { fill: url(#flowerGrad); }
+.vine__flower .petal--inner { fill: #f3c4ba; opacity: 0.95; }
+.vine__flower .core { fill: #caa05f; }
+.vine__flower .stamen { fill: #9c6f33; }
 
 @keyframes leafSway {
   0%, 100% { rotate: -5deg; }
@@ -1032,19 +1046,14 @@ section[id] { scroll-margin-top: 86px; }
    ============================================================ */
 .reveal {
   opacity: 0;
-  /* enter dramatically from real depth: pushed far back on Z, tipped on X,
-     and sliding in from alternating sides (--dx set per item in JS) */
-  transform:
-    perspective(1000px)
-    translate3d(calc(var(--dx, 0) * 60px), 80px, -460px)
-    rotateX(18deg) rotateY(calc(var(--dx, 0) * -6deg));
-  transition: opacity 0.9s var(--ease), transform 1.15s var(--ease);
-  transition-delay: calc(var(--i, 0) * 90ms);
+  transform: translate3d(0, 38px, 0);
+  transition: opacity 0.8s var(--ease), transform 0.9s var(--ease);
+  transition-delay: calc(var(--i, 0) * 70ms);
   will-change: opacity, transform;
 }
 .reveal.is-visible {
   opacity: 1;
-  transform: perspective(1000px) translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg);
+  transform: none;
 }
 
 /* ============================================================

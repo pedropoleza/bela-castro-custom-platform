@@ -5,10 +5,14 @@ const APIKEY = () => process.env.STEVO_APIKEY || "";
 const BASE = () => (process.env.STEVO_API_BASE || "").replace(/\/$/, "");
 const READY = () => process.env.STEVO_READY === "1";
 
-async function stevo(path, body) {
-  const r = await fetch(BASE() + path, {
+// Low-level call. Pass { base, apikey } to target a specific company's instance;
+// omit to use the legacy single-location env vars.
+async function stevo(path, body, creds = {}) {
+  const base = (creds.base || BASE()).replace(/\/$/, "");
+  const apikey = creds.apikey || APIKEY();
+  const r = await fetch(base + path, {
     method: "POST",
-    headers: { apikey: APIKEY(), "Content-Type": "application/json" },
+    headers: { apikey, "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
   const t = await r.text();

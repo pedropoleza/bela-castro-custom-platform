@@ -839,7 +839,10 @@ function wire(route, params) {
     const m = state.messages.find((x) => x.day === day && x.status !== "archived");
     state.dispatch.messageId = m ? m.id : null;
     state.ui.dayOpen = day; render();
-    document.querySelector(".daypanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // let the panel paint + start its open animation, then glide it under the fixed bar
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      document.querySelector(".daypanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }));
   });
   const closeDay = root.querySelector("[data-close-day]");
   closeDay && (closeDay.onclick = () => { state.ui.dayOpen = null; render(); });

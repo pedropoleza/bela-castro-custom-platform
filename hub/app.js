@@ -269,14 +269,20 @@ async function dripSend({ msg, wfId, eligible, f, logDispatch, button }) {
   const summary = document.getElementById("aud-summary");
   for (let b = 0; b < chunks.length; b++) {
     if (channel === "stevo") {
-      // send each contact individually so we can personalize + add the opt-in button
+      // Stevo messages are always sent in button format (per Stevo Manager v2 docs:
+      // /send/button), each carrying the "keep receiving" opt-in button so the
+      // contact can always confirm engagement. The last allowed attempt before
+      // auto-flagging adds an explicit re-opt-in nudge.
       for (const c of chunks[b]) {
-        const isLastChance = (c.noReplyCount || 0) === flagAfter - 1; // re-opt-in warning send
-        const text = renderMessage(msg.body, c) + (isLastChance ? "\n\nVocê ainda quer receber essas mensagens? Toque no botão abaixo 👇" : "");
+        const isLastChance = (c.noReplyCount || 0) === flagAfter - 1; // final re-opt-in warning
+        const text = renderMessage(msg.body, c) + (isLastChance
+          ? "\n\nVocê ainda quer receber essas mensagens? Toque no botão abaixo 👇"
+          : "");
         const r = await api.stevoSend({
-          kind: isLastChance ? "button" : "text",
+          kind: "button",
           number: c.phone, text,
-          buttons: isLastChance ? [{ id: "keep_receiving", text: "Quero continuar recebendo" }] : []
+          footer: state.settings.stevoFooter || "",
+          buttons: [{ id: "keep_receiving", text: t("Quero continuar recebendo", "Keep me subscribed") }]
         });
         if (r && r.pending) pending++;
         else if (r && r.error) failed++;
@@ -691,6 +697,7 @@ function dispatchPanels() {
         <div class="audience-count" id="aud-count">${count}</div>
         <p class="muted" id="aud-summary" style="font-size:.84rem">${t("elegíveis após exclusões de segurança", "eligible after safety exclusions")}</p>
         <div class="drip-note">🩸 ${t("Modo drip (sempre ativo)", "Drip mode (always on)")} · via ${state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow"}</div>
+        ${state.settings.channel === "stevo" ? `<div class="drip-note" style="margin-top:6px">💬 ${t("Formato com botão (/send/button) — cada mensagem leva o botão", "Button format (/send/button) — every message carries the")} “${t("Quero continuar recebendo", "Keep me subscribed")}”.</div>` : ""}
         <div class="drip-edit row" style="gap:10px;margin-top:8px">
           <div class="field" style="flex:1"><label>${t("Mensagens por lote", "Messages per batch")}</label><input class="input" type="number" min="1" id="d-drip-batch" value="${dripCfg().batch}"></div>
           <div class="field" style="flex:1"><label>${t("Segundos entre lotes", "Seconds between batches")}</label><input class="input" type="number" min="1" id="d-drip-every" value="${dripCfg().everySec}"></div>
@@ -996,10 +1003,23 @@ function wire(route, params) {
     };
     const test = $("#d-test"); test && (test.onclick = async () => {
       test.disabled = true;
-      const res = await api.dispatchTest({ contactId: state.settings.testContact, channel: msg.channel, message: renderMessage(msg.body) });
+      let res;
+      if ((state.settings.channel || "stevo") === "stevo") {
+        // mirror the live format: a Stevo button message with the opt-in button
+        res = await api.stevoSend({
+          kind: "button",
+          number: state.settings.testContact,
+          text: renderMessage(msg.body),
+          footer: state.settings.stevoFooter || "",
+          buttons: [{ id: "keep_receiving", text: t("Quero continuar recebendo", "Keep me subscribed") }]
+        });
+      } else {
+        res = await api.dispatchTest({ contactId: state.settings.testContact, channel: msg.channel, message: renderMessage(msg.body) });
+      }
       test.disabled = false;
       if (res && res.error) toast("Test failed: " + res.error, true);
-      else toast(res && res.mock ? "Test (mock) ok — connect backend to really send." : "Test sent.");
+      else if (res && res.pending) toast(t("Stevo pronto — falta o número conectado para enviar de verdade.", "Stevo ready — connect a number to actually send."), true);
+      else toast(res && res.mock ? "Test (mock) ok — connect backend to really send." : t("Teste enviado.", "Test sent."));
     });
     const sched = $("#d-schedule"); sched && (sched.onclick = () => {
       const f = readFilters(), eligible = eligibleNow();

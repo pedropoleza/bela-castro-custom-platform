@@ -269,15 +269,13 @@ async function dripSend({ msg, wfId, eligible, f, logDispatch, button }) {
   const summary = document.getElementById("aud-summary");
   for (let b = 0; b < chunks.length; b++) {
     if (channel === "stevo") {
-      // Build the Stevo payload from the message's authored kind (text/button/list/carousel/image).
-      // On the last allowed attempt before auto-flagging, force a button with the re-opt-in nudge.
+      // Each message's payload is built from its authored kind. Interactive
+      // kinds (button/list/carousel) come out of buildStevoCommand as a single
+      // chat-command line that Stevo's bot parses into a real interactive WA
+      // message — so they all ship as kind:text. Image kind goes via /send/image.
       for (const c of chunks[b]) {
         const isLastChance = (c.noReplyCount || 0) === flagAfter - 1;
-        let payload = buildStevoPayload(msg, c, isLastChance);
-        if (isLastChance && payload.kind !== "button") {
-          payload = { kind: "button", text: payload.text, title: msg.header || "", footer: msg.footer || "", image: msg.image || "",
-            buttons: [{ id: "keep_receiving", text: t("Quero continuar recebendo", "Keep me subscribed") }] };
-        }
+        const payload = buildStevoPayload(msg, c, isLastChance);
         payload.number = c.phone;
         if (state.settings.locationId) payload.locationId = state.settings.locationId;
         const r = await api.stevoSend(payload);
@@ -545,7 +543,7 @@ screens.library = (params) => {
         <div style="min-width:0">
           <div class="row" style="gap:8px;flex-wrap:wrap">
             <strong>${esc(m.title)}</strong>
-            <span class="pill pill--muted">${esc(KIND_LABEL(m.kind || "text"))}</span>
+            <span class="pill pill--muted">${esc(KIND_INFO(m.kind || "text").icon + " " + KIND_INFO(m.kind || "text").label)}</span>
             <span class="pill ${statusClass(m.status)}">${m.status}</span>
           </div>
           <div class="muted" style="font-size:.8rem">${m.channel} · v${m.version} · edited ${fmtDate(m.edited)}</div>
@@ -565,15 +563,71 @@ screens.library = (params) => {
   return `<h1 class="section-title">${t("Mensagens", "Message Library")}</h1><p class="section-sub">${t("Crie e gerencie variações de mensagem para cada dia.", "Create and manage message variations for each weekday.")} ${day ? `${t("Filtrado por", "Filtered to")} <strong>${esc(day)}</strong> · <a href="#/library" style="color:var(--accent)">${t("ver todas", "show all")}</a>` : t("Use variáveis para personalizar cada mensagem.", "Use placeholders to personalize each message.")}</p>${groups}`;
 };
 
-/* ---------------- Stevo command builder (replicates cmd.stevo.chat) ---------------- */
+/* ---------------- Stevo command builder (cmd.stevo.chat parity) ----------------
+   Stevo's interactive messages are produced by a CHAT-COMMAND syntax — a single
+   text line that Stevo's bot parses and renders into a WhatsApp interactive
+   message. Field separator is "|", buttons/items inside a field are separated
+   by "/", and the inner "text*id" / "text*desc*id" pair uses "*".
+
+       Reply Buttons  → #bt|Title|Description|Footer|Btn1*id1/Btn2*id2/Btn3*id3
+       Interactive List → #List|Title|Description|ButtonText|Opt1*Desc1*id1/Opt2*Desc2*id2
+       Carousel       → #carousel|img1|title1|desc1|btn1*id1/btn2*id2||img2|title2|desc2|btn1*id1
+       Plain Text     → (no command, just the text)
+       Image          → (no command, sent via /send/image with optional caption)
+
+   Constraints come straight from Stevo: 3 buttons max, 10 list items max,
+   10 carousel cards max. */
 const KINDS = ["text", "button", "list", "carousel", "image"];
-const KIND_LABEL = (k) => ({
-  text: t("Texto", "Text"),
-  button: t("Botões de Resposta (até 3)", "Reply Buttons (max 3)"),
-  list: t("Lista (até 10 itens)", "List (max 10 rows)"),
-  carousel: t("Carrossel (até 10 cards)", "Carousel (max 10 cards)"),
-  image: t("Imagem", "Image")
-})[k] || k;
+const KIND_INFO = (k) => ({
+  text: {
+    label: t("Texto", "Text"),
+    short: t("Mensagem comum", "Plain message"),
+    icon: "✉️",
+    desc: t(
+      "Mensagem de texto simples. Sem botões, sem opções — apenas o corpo da mensagem com variáveis (ex: {{contact.first_name}}).",
+      "Plain text message. No buttons, no choices — just the body with placeholders (e.g. {{contact.first_name}})."
+    )
+  },
+  button: {
+    label: t("Botões de Resposta", "Reply Buttons"),
+    short: t("Até 3 opções rápidas", "Up to 3 quick replies"),
+    icon: "🔘",
+    desc: t(
+      "Mostra até 3 botões de resposta rápida. O cliente toca em uma opção e o ID volta no webhook → você usa pra aplicar uma tag e disparar o workflow nativo do GoHighLevel daquela resposta.",
+      "Shows up to 3 quick-reply buttons. The contact taps one option, the ID returns on the webhook → use it to apply a tag and trigger the native GoHighLevel workflow for that response."
+    ),
+    cmd: "#bt|Título|Descrição|Rodapé|Opção1*ID1/Opção2*ID2/Opção3*ID3"
+  },
+  list: {
+    label: t("Lista", "List"),
+    short: t("Até 10 itens em menu", "Up to 10 items in a menu"),
+    icon: "📋",
+    desc: t(
+      "Menu deslizante com até 10 itens. Bom pra catálogo / opções longas. Cada item tem Título, Descrição (opcional) e ID — o ID retorna pelo webhook quando o cliente escolhe.",
+      "A scrollable menu of up to 10 items. Good for catalogs or longer choice lists. Each item has Title, Description (optional) and ID — the ID comes back on the webhook on selection."
+    ),
+    cmd: "#List|Título|Descrição|Texto do botão|Opção*Descrição*ID/Opção2*Descrição2*ID2"
+  },
+  carousel: {
+    label: t("Carrossel", "Carousel"),
+    short: t("Até 10 cards com imagem", "Up to 10 image cards"),
+    icon: "🖼️",
+    desc: t(
+      "Carrossel deslizante com até 10 cards. Cada card tem imagem, título, descrição e seus próprios botões (máx 3). Ideal pra vitrine de produtos / planos.",
+      "Swipeable carousel with up to 10 cards. Each card has an image, title, description and its own buttons (max 3). Great for product or plan showcases."
+    ),
+    cmd: "#carousel|imagem1|titulo1|descricao1|botao1*id1/botao2*id2||imagem2|titulo2|descricao2|botao1*id1"
+  },
+  image: {
+    label: t("Imagem", "Image"),
+    short: t("Foto com legenda opcional", "Photo with optional caption"),
+    icon: "📷",
+    desc: t(
+      "Envia uma imagem (URL pública) com legenda opcional. Use pra abrir conversa com algo visual antes do conteúdo principal.",
+      "Sends an image (public URL) with an optional caption. Use it to open a conversation with something visual before the main content."
+    )
+  }
+})[k] || { label: k, short: "", icon: "•", desc: "" };
 
 function normalizeMsg(m) {
   if (!m.kind) m.kind = "text";
@@ -588,24 +642,35 @@ function normalizeMsg(m) {
   return m;
 }
 
-function buildStevoPayload(m, contact, lastChance) {
+// Serialize a message into Stevo's chat-command string (or plain text for kind:text).
+function buildStevoCommand(m, contact) {
   normalizeMsg(m);
-  const k = m.kind;
-  const text = renderMessage(m.body || "", contact) + (lastChance
-    ? "\n\n" + t("Você ainda quer receber essas mensagens? Toque no botão abaixo 👇", "Do you still want these messages? Tap the button below 👇")
-    : "");
-  const base = { kind: k, text };
-  if (k === "button")   return { ...base, title: m.header || "", footer: m.footer || "", image: m.image || "", buttons: m.buttons };
-  if (k === "list")     return { ...base, title: m.header || "", footer: m.footer || "", list: m.list };
-  if (k === "carousel") return { ...base, cards: m.cards };
-  if (k === "image")    return { ...base, image: m.image || "" };
-  return base;
+  const sub = (s) => renderMessage(s || "", contact || SAMPLE_CONTACT);
+  if (m.kind === "button") {
+    const buttons = m.buttons.map((b) => `${sub(b.text)}*${b.id || ""}`).join("/");
+    return `#bt|${sub(m.header)}|${sub(m.body)}|${sub(m.footer)}|${buttons}`;
+  }
+  if (m.kind === "list") {
+    const rows = m.list.sections[0].rows.map((r) => `${sub(r.title)}*${sub(r.description)}*${r.id || ""}`).join("/");
+    return `#List|${sub(m.header)}|${sub(m.body)}|${sub(m.list.buttonText)}|${rows}`;
+  }
+  if (m.kind === "carousel") {
+    return "#carousel|" + m.cards.map((c) => {
+      const btns = (c.buttons || []).map((b) => `${sub(b.text)}*${b.id || ""}`).join("/");
+      return `${c.image || ""}|${sub(c.title)}|${sub(c.description)}|${btns}`;
+    }).join("||");
+  }
+  // text / image — no command, just the body
+  return sub(m.body);
 }
 
-function stevoCommand(m, number) {
-  const payload = buildStevoPayload(m, SAMPLE_CONTACT, false);
-  if (number) payload.number = number;
-  return JSON.stringify(payload, null, 2);
+// Build the JSON body our /api/stevo/send endpoint accepts.
+function buildStevoPayload(m, contact, lastChance) {
+  normalizeMsg(m);
+  const cmd = buildStevoCommand(m, contact);
+  const nudge = lastChance ? "\n\n" + t("Você ainda quer receber essas mensagens? Responda *SIM* pra continuar 👇", "Do you still want these messages? Reply *YES* to continue 👇") : "";
+  if (m.kind === "image") return { kind: "image", text: cmd + nudge, image: m.image || "" };
+  return { kind: "text", text: cmd + nudge };
 }
 
 function previewHTML(m) {
@@ -613,7 +678,7 @@ function previewHTML(m) {
   const txt = esc(renderMessage(m.body || "")).replace(/\n/g, "<br>");
   const head = m.header ? `<div class="wa-head">${esc(m.header)}</div>` : "";
   const foot = m.footer ? `<div class="wa-foot">${esc(m.footer)}</div>` : "";
-  const img  = (m.image && m.kind !== "carousel") ? `<div class="wa-img"><img src="${esc(m.image)}" alt=""></div>` : "";
+  const img  = (m.image && (m.kind === "image" || m.kind === "text")) ? `<div class="wa-img"><img src="${esc(m.image)}" alt=""></div>` : "";
   let extras = "";
   if (m.kind === "button") {
     extras = `<div class="wa-buttons">${m.buttons.map((b) => `<div class="wa-btn">${esc(b.text || "")}</div>`).join("")}</div>`;
@@ -639,20 +704,20 @@ function buttonsEditor(m) {
   const rows = m.buttons.map((b, i) => `
     <div class="builder-row" data-bi="${i}">
       <input class="input" data-b="text" placeholder="${esc(t("Texto do botão", "Button text"))}" value="${esc(b.text || "")}">
-      <input class="input" data-b="id" placeholder="ID" value="${esc(b.id || "")}">
+      <input class="input" data-b="id" placeholder="ID (ex: quero_plano_a)" value="${esc(b.id || "")}">
       <button class="btn btn--ghost btn--sm" data-bx="${i}" aria-label="remove">✕</button>
     </div>`).join("");
   const full = m.buttons.length >= 3;
   return `<div class="builder">
-    <div class="builder__title">${t("Botões (máx. 3)", "Buttons (max 3)")}</div>
-    ${rows || `<p class="muted" style="font-size:.84rem">${t("Nenhum botão ainda.", "No buttons yet.")}</p>`}
+    <div class="builder__title">${t("Botões", "Buttons")} <span class="muted">${m.buttons.length}/3</span></div>
+    ${rows || `<p class="muted" style="font-size:.84rem">${t("Nenhum botão ainda. Adicione até 3.", "No buttons yet. Add up to 3.")}</p>`}
     <button class="btn btn--soft btn--sm" id="b-add" ${full ? "disabled" : ""}>+ ${t("Adicionar botão", "Add button")}</button>
   </div>`;
 }
 
 function listEditor(m) {
   const rows = m.list.sections[0].rows.map((r, i) => `
-    <div class="builder-row" data-li="${i}">
+    <div class="builder-row builder-row--list" data-li="${i}">
       <input class="input" data-l="title" placeholder="${esc(t("Título do item", "Item title"))}" value="${esc(r.title || "")}">
       <input class="input" data-l="id" placeholder="ID" value="${esc(r.id || "")}">
       <input class="input" data-l="description" placeholder="${esc(t("Descrição (opcional)", "Description (optional)"))}" value="${esc(r.description || "")}">
@@ -660,10 +725,10 @@ function listEditor(m) {
     </div>`).join("");
   const full = m.list.sections[0].rows.length >= 10;
   return `<div class="builder">
-    <div class="builder__title">${t("Itens da Lista (máx. 10)", "List items (max 10)")}</div>
     <div class="field"><label>${t("Texto do botão da lista", "List button label")}</label>
       <input class="input" id="ed-listbtn" value="${esc(m.list.buttonText || "")}" placeholder="${esc(t("Ex: Ver opções", "E.g. See options"))}"></div>
-    ${rows || `<p class="muted" style="font-size:.84rem">${t("Nenhum item ainda.", "No items yet.")}</p>`}
+    <div class="builder__title">${t("Itens da Lista", "List items")} <span class="muted">${m.list.sections[0].rows.length}/10</span></div>
+    ${rows || `<p class="muted" style="font-size:.84rem">${t("Nenhum item ainda. Adicione até 10.", "No items yet. Add up to 10.")}</p>`}
     <button class="btn btn--soft btn--sm" id="l-add" ${full ? "disabled" : ""}>+ ${t("Adicionar item", "Add item")}</button>
   </div>`;
 }
@@ -673,10 +738,10 @@ function carouselEditor(m) {
     <div class="builder-card" data-ci="${i}">
       <div class="row between"><strong>${t("Card", "Card")} ${i + 1}</strong>
         <button class="btn btn--ghost btn--sm" data-cx="${i}">✕ ${t("remover", "remove")}</button></div>
-      <div class="field"><label>${t("Imagem (URL)", "Image (URL)")}</label><input class="input" data-c="image" value="${esc(c.image || "")}"></div>
+      <div class="field"><label>${t("Imagem (URL)", "Image (URL)")}</label><input class="input" data-c="image" value="${esc(c.image || "")}" placeholder="https://..."></div>
       <div class="field"><label>${t("Título", "Title")}</label><input class="input" data-c="title" value="${esc(c.title || "")}"></div>
       <div class="field"><label>${t("Descrição", "Description")}</label><textarea class="textarea" data-c="description" rows="2">${esc(c.description || "")}</textarea></div>
-      <div class="muted" style="font-size:.78rem;margin-bottom:4px">${t("Botões do card (máx. 3)", "Card buttons (max 3)")}</div>
+      <div class="muted" style="font-size:.78rem;margin-bottom:4px">${t("Botões do card", "Card buttons")} <span class="muted">${(c.buttons || []).length}/3</span></div>
       ${(c.buttons || []).map((b, j) => `
         <div class="builder-row">
           <input class="input" data-cb="${j}" data-cbf="text" placeholder="${esc(t("Texto", "Text"))}" value="${esc(b.text || "")}">
@@ -687,9 +752,24 @@ function carouselEditor(m) {
     </div>`).join("");
   const full = m.cards.length >= 10;
   return `<div class="builder">
-    <div class="builder__title">${t("Cards (máx. 10)", "Cards (max 10)")}</div>
-    ${cards || `<p class="muted" style="font-size:.84rem">${t("Nenhum card ainda.", "No cards yet.")}</p>`}
+    <div class="builder__title">${t("Cards", "Cards")} <span class="muted">${m.cards.length}/10</span></div>
+    ${cards || `<p class="muted" style="font-size:.84rem">${t("Nenhum card ainda. Adicione até 10.", "No cards yet. Add up to 10.")}</p>`}
     <button class="btn btn--soft btn--sm" id="c-add" ${full ? "disabled" : ""}>+ ${t("Adicionar card", "Add card")}</button>
+  </div>`;
+}
+
+function kindPicker(currentKind) {
+  return `<div class="kind-picker" role="tablist">
+    ${KINDS.map((k) => {
+      const info = KIND_INFO(k);
+      return `<button type="button" class="kind-chip ${k === currentKind ? "is-active" : ""}" data-kind="${k}" role="tab" aria-selected="${k === currentKind}">
+        <span class="kind-chip__ico" aria-hidden="true">${info.icon}</span>
+        <span class="kind-chip__main">
+          <strong>${esc(info.label)}</strong>
+          <span class="kind-chip__sub">${esc(info.short)}</span>
+        </span>
+      </button>`;
+    }).join("")}
   </div>`;
 }
 
@@ -699,18 +779,31 @@ function messageEditor(id) {
   normalizeMsg(m);
   const def = DAY_DEFS.find((d) => d.day === m.day);
   const vars = VARIABLES.map((v) => `<button class="var-chip" data-var="${esc(v)}">${esc(v)}</button>`).join("");
+  const info = KIND_INFO(m.kind);
   const showHeaderFooter = m.kind === "button" || m.kind === "list";
-  const showImageField   = m.kind !== "carousel";
+  const showImageField = m.kind === "image";
   const extra = m.kind === "button" ? buttonsEditor(m)
               : m.kind === "list" ? listEditor(m)
               : m.kind === "carousel" ? carouselEditor(m) : "";
   return `
     <div class="row between mb">
-      <h1 class="section-title" style="margin:0">${t("Editor de Mensagem", "Message Editor")}</h1>
+      <h1 class="section-title" style="margin:0">${t("Configurar Comando", "Configure Command")}</h1>
       <a class="btn btn--ghost btn--sm" href="#/library?day=${m.day}">← ${t("Biblioteca", "Library")}</a>
     </div>
+
+    <div class="card kind-card mb">
+      <div class="field" style="margin-bottom:8px"><label>${t("Tipo do Comando", "Command Type")}</label></div>
+      ${kindPicker(m.kind)}
+      <div class="kind-info">
+        <div class="kind-info__head"><span>${info.icon}</span><strong>${esc(info.label)}</strong></div>
+        <p>${esc(info.desc)}</p>
+        ${info.cmd ? `<div class="kind-info__cmd"><span class="muted">${t("Formato Stevo", "Stevo format")}:</span><code>${esc(info.cmd)}</code></div>` : ""}
+      </div>
+    </div>
+
     <div class="split split--editor">
       <div class="card">
+        <div class="panel-title">${t("Configurar campos", "Configure fields")}</div>
         <div class="field"><label>${t("Título interno", "Internal title")}</label><input class="input" id="ed-title" value="${esc(m.title)}"></div>
         <div class="row" style="gap:12px">
           <div class="field" style="flex:1"><label>${t("Dia", "Weekday")}</label>
@@ -720,33 +813,36 @@ function messageEditor(id) {
           <div class="field" style="flex:1"><label>${t("Status", "Status")}</label>
             <select class="select" id="ed-status">${["draft", "ready", "scheduled", "paused"].map((s) => `<option ${s === m.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
         </div>
-        <div class="field"><label>${t("Tipo do Comando", "Command Type")}</label>
-          <select class="select" id="ed-kind">${KINDS.map((k) => `<option value="${k}" ${k === m.kind ? "selected" : ""}>${esc(KIND_LABEL(k))}</option>`).join("")}</select></div>
         ${showHeaderFooter ? `
           <div class="row" style="gap:12px">
             <div class="field" style="flex:1"><label>${t("Título", "Title")}</label><input class="input" id="ed-header" value="${esc(m.header)}"></div>
             <div class="field" style="flex:1"><label>${t("Rodapé", "Footer")}</label><input class="input" id="ed-footer" value="${esc(m.footer)}"></div>
           </div>` : ""}
         ${showImageField ? `
-          <div class="field"><label><input type="checkbox" id="ed-img-toggle" ${m.image || m.kind === "image" ? "checked" : ""}> ${t("Incluir Imagem", "Include Image")}</label>
-            <input class="input" id="ed-image" placeholder="https://..." value="${esc(m.image || "")}" style="${m.image || m.kind === "image" ? "" : "display:none;"}margin-top:6px"></div>` : ""}
+          <div class="field"><label>${t("URL da imagem", "Image URL")}</label>
+            <input class="input" id="ed-image" placeholder="https://..." value="${esc(m.image || "")}"></div>` : ""}
         <label class="field" style="margin-bottom:4px"><span style="font-size:.78rem;font-weight:600;color:var(--muted)">${t("Inserir variável", "Insert variable")}</span></label>
         <div class="var-row">${vars}</div>
-        <div class="field"><label>${t("Descrição (corpo)", "Description (body)")}</label><textarea class="textarea" id="ed-body" rows="6">${esc(m.body || "")}</textarea></div>
+        <div class="field"><label>${m.kind === "image" ? t("Legenda (opcional)", "Caption (optional)") : t("Descrição (corpo)", "Description (body)")}</label>
+          <textarea class="textarea" id="ed-body" rows="6">${esc(m.body || "")}</textarea></div>
         ${extra}
         <div class="row mt" style="gap:10px;flex-wrap:wrap">
           <button class="btn btn--primary" id="ed-save">${t("Salvar", "Save")}</button>
-          <button class="btn btn--soft" id="ed-copy">${t("Copiar comando", "Copy command")}</button>
           <span class="muted" style="font-size:.8rem">${esc(def ? dayTheme(def) : "")} · v${m.version} · ${fmtDate(m.edited)}</span>
         </div>
       </div>
+
       <div class="card card--glass">
-        <div class="panel-title">${t("Preview do Comando", "Command preview")} <span class="pill pill--muted">${esc(KIND_LABEL(m.kind))}</span></div>
+        <div class="panel-title">${t("Comando Gerado", "Generated Command")}</div>
+        <div class="cmd-box">
+          <pre id="ed-command" class="cmd-pre">${esc(buildStevoCommand(m))}</pre>
+          <button class="btn btn--soft btn--sm cmd-copy" id="ed-copy">📋 ${t("Copiar Comando", "Copy Command")}</button>
+        </div>
+        <p class="muted" style="font-size:.78rem;margin-top:8px">${t("Este é o texto exato enviado ao Stevo — o bot dele converte em mensagem interativa no WhatsApp.", "This is the exact text sent to Stevo — the bot turns it into the interactive WhatsApp message.")}</p>
+
+        <div class="panel-title mt">${t("Como aparece no WhatsApp", "How it looks on WhatsApp")}</div>
         <div class="wa-preview" id="ed-preview">${previewHTML(m)}</div>
-        <p class="muted mt" style="font-size:.78rem">${t("As variáveis são resolvidas por contato no envio. Este preview usa um contato de exemplo.", "Variables resolve per contact at send time. This preview uses a sample contact.")}</p>
-        <details class="advanced mt"><summary>${t("Ver payload", "See payload")}</summary>
-          <pre id="ed-payload" style="font-size:.74rem;background:var(--bg);padding:10px;border-radius:8px;overflow:auto;max-height:240px;white-space:pre-wrap;word-break:break-word">${esc(stevoCommand(m))}</pre>
-        </details>
+        <p class="muted" style="font-size:.78rem;margin-top:6px">${t("Preview com contato de exemplo. Variáveis são resolvidas no envio.", "Preview uses a sample contact. Variables resolve at send time.")}</p>
       </div>
     </div>`;
 }
@@ -1033,7 +1129,7 @@ function wire(route, params) {
       state.dispatch.messageId = b.dataset.id; toast("Loaded into Dispatch Center."); location.hash = "#/dispatch";
     });
 
-    // editor — full Stevo command builder (text / button / list / carousel / image)
+    // editor — Stevo command builder (cmd.stevo.chat parity)
     if (params.get("edit")) {
       const id = params.get("edit");
       const m = state.messages.find((x) => x.id === id);
@@ -1041,24 +1137,18 @@ function wire(route, params) {
       normalizeMsg(m);
       const refresh = () => {
         const p = $("#ed-preview"); if (p) p.innerHTML = previewHTML(m);
-        const pay = $("#ed-payload"); if (pay) pay.textContent = stevoCommand(m);
+        const c = $("#ed-command"); if (c) c.textContent = buildStevoCommand(m);
       };
       const bindInput = (sel, key) => { const el = $(sel); el && el.addEventListener("input", () => { m[key] = el.value; persist(); refresh(); }); };
       bindInput("#ed-title", "title"); bindInput("#ed-body", "body");
       bindInput("#ed-header", "header"); bindInput("#ed-footer", "footer"); bindInput("#ed-image", "image");
       const selectMap = { "ed-day": "day", "ed-channel": "channel", "ed-status": "status" };
       Object.keys(selectMap).forEach((id2) => { const el = $("#" + id2); el && el.addEventListener("change", () => { m[selectMap[id2]] = el.value; persist(); refresh(); }); });
-      // include-image toggle
-      const tog = $("#ed-img-toggle");
-      tog && tog.addEventListener("change", () => {
-        const img = $("#ed-image");
-        if (!tog.checked) { m.image = ""; if (img) { img.value = ""; img.style.display = "none"; } }
-        else if (img) img.style.display = "";
-        persist(); refresh();
+      // command type chips — switching re-renders so the per-kind editor appears
+      root.querySelectorAll(".kind-chip[data-kind]").forEach((chip) => chip.onclick = () => {
+        if (chip.dataset.kind === m.kind) return;
+        m.kind = chip.dataset.kind; persist(); render();
       });
-      // command type switch (re-renders so the per-kind editor appears)
-      const ks = $("#ed-kind");
-      ks && ks.addEventListener("change", () => { m.kind = ks.value; persist(); render(); });
       // variable chips
       root.querySelectorAll(".var-chip").forEach((c) => c.onclick = () => {
         const v = c.dataset.var, body = $("#ed-body"); if (!body) return;
@@ -1105,9 +1195,13 @@ function wire(route, params) {
       // save + copy command
       $("#ed-save").onclick = () => { m.version += 1; m.edited = new Date().toISOString(); persist(); toast(t("Mensagem salva (v", "Message saved (v") + m.version + ")."); location.hash = `#/library?day=${m.day}`; };
       $("#ed-copy").onclick = async () => {
-        const txt = stevoCommand(m);
+        const txt = buildStevoCommand(m);
         try { await navigator.clipboard.writeText(txt); toast(t("Comando copiado.", "Command copied.")); }
-        catch { toast(t("Falha ao copiar.", "Copy failed."), true); }
+        catch {
+          // fallback: select the <pre> contents so the user can copy manually
+          const el = $("#ed-command"); if (el) { const r = document.createRange(); r.selectNodeContents(el); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+          toast(t("Selecionei o comando — pressione Ctrl+C.", "I selected the command — press Ctrl+C."), true);
+        }
       };
     }
   }

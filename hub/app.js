@@ -174,12 +174,18 @@ const seedSettings = () => ({
     last_dispatch_id: "last_dispatch_id",
     wellness_program_status: "wellness_program_status"
   },
-  testContact: "marina@email.com"
+  testContact: "marina@email.com",
+  // Reusable command macros — expand via {{macro:NAME}} inside any field at send time.
+  // Each macro is a chunk of Stevo command syntax (typically buttons or list items).
+  macros: [
+    { name: "opt_in_3", value: "Sim*sim_keep/Não*sim_stop/Talvez*sim_later" },
+    { name: "engage_simples", value: "Continuar*continuar_engage/Pausar*pausar_engage/Sair*sair_engage" }
+  ]
 });
 
 /* ---------------- persistent state ---------------- */
 // bump to reset stored messages/schedule when seed defaults change
-const STORE_VER = "4";
+const STORE_VER = "5";
 try {
   if (localStorage.getItem("iwh_ver") !== STORE_VER) {
     ["messages", "dayState", "logs", "settings"].forEach((k) => localStorage.removeItem("iwh_" + k));
@@ -629,6 +635,65 @@ const KIND_INFO = (k) => ({
   }
 })[k] || { label: k, short: "", icon: "•", desc: "" };
 
+/* ---------------- Stevo command extensions ---------------- */
+// (1) Reusable macros — {{macro:name}} inside any field expands to a saved fragment
+//     (usually a buttons/items chunk like "Sim*sim_keep/Não*sim_stop").
+function macrosList() { return (state.settings && state.settings.macros) || []; }
+function expandMacros(s) {
+  return (s || "").replace(/\{\{macro:([a-zA-Z0-9_]+)\}\}/g, (full, name) => {
+    const m = macrosList().find((x) => x.name === name);
+    return m ? m.value : full;
+  });
+}
+
+// (2) ID convention: "action_topic[_variant]" — IDs that fit it become both
+//     routing AND analytics dimensions. Validator is informational, never blocks.
+const ID_CHAIN_PREFIX = "chain:";
+const ID_CONVENTION_RE = /^[a-z0-9]+_[a-z0-9]+(?:_[a-z0-9]+)?$/i;
+function parseIdConvention(id) {
+  if (!id || id.startsWith(ID_CHAIN_PREFIX)) return null;
+  if (!ID_CONVENTION_RE.test(id)) return null;
+  const [action, topic, variant] = id.split("_");
+  return { action, topic, variant: variant || null };
+}
+function idBadge(id) {
+  if (!id) return "";
+  if (id.startsWith(ID_CHAIN_PREFIX)) return `<span class="id-badge id-badge--chain" title="${esc(t("encadeia para outra mensagem", "chains to another message"))}">→</span>`;
+  return parseIdConvention(id)
+    ? `<span class="id-badge id-badge--ok" title="${esc(t("padrão ok (acao_topico_variante)", "matches convention"))}">✓</span>`
+    : `<span class="id-badge id-badge--warn" title="${esc(t("sugestão: use acao_topico_variante", "tip: use action_topic_variant"))}">!</span>`;
+}
+
+// (3) Reverse parser — paste a #bt|... / #List|... / #carousel|... command and
+//     decompose it back into the message editor fields.
+function parseStevoCommand(raw) {
+  const text = (raw || "").trim();
+  if (!text) return null;
+  const splitBtns = (s) => (s || "").split("/").filter(Boolean).map((b) => {
+    const [tx, id] = b.split("*"); return { text: tx || "", id: id || "" };
+  });
+  if (text.startsWith("#bt|")) {
+    const [title, desc, footer, btns] = text.slice(4).split("|");
+    return { kind: "button", header: title || "", body: desc || "", footer: footer || "", buttons: splitBtns(btns) };
+  }
+  if (text.startsWith("#List|")) {
+    const [title, desc, btnText, rows] = text.slice(6).split("|");
+    const items = (rows || "").split("/").filter(Boolean).map((r) => {
+      const [tx, dx, id] = r.split("*"); return { title: tx || "", description: dx || "", id: id || "" };
+    });
+    return { kind: "list", header: title || "", body: desc || "", list: { buttonText: btnText || "", sections: [{ title: "", rows: items }] } };
+  }
+  if (text.startsWith("#carousel|")) {
+    const blocks = text.slice(10).split("||");
+    const cards = blocks.map((b) => {
+      const [img, title, desc, btns] = b.split("|");
+      return { image: img || "", title: title || "", description: desc || "", buttons: splitBtns(btns) };
+    });
+    return { kind: "carousel", cards };
+  }
+  return { kind: "text", body: text };
+}
+
 function normalizeMsg(m) {
   if (!m.kind) m.kind = "text";
   if (!Array.isArray(m.buttons)) m.buttons = [];
@@ -643,25 +708,27 @@ function normalizeMsg(m) {
 }
 
 // Serialize a message into Stevo's chat-command string (or plain text for kind:text).
+// Variables ({{contact.x}}) and macros ({{macro:name}}) are resolved per call.
 function buildStevoCommand(m, contact) {
   normalizeMsg(m);
-  const sub = (s) => renderMessage(s || "", contact || SAMPLE_CONTACT);
+  const sub = (s) => expandMacros(renderMessage(s || "", contact || SAMPLE_CONTACT));
+  let out;
   if (m.kind === "button") {
     const buttons = m.buttons.map((b) => `${sub(b.text)}*${b.id || ""}`).join("/");
-    return `#bt|${sub(m.header)}|${sub(m.body)}|${sub(m.footer)}|${buttons}`;
-  }
-  if (m.kind === "list") {
+    out = `#bt|${sub(m.header)}|${sub(m.body)}|${sub(m.footer)}|${buttons}`;
+  } else if (m.kind === "list") {
     const rows = m.list.sections[0].rows.map((r) => `${sub(r.title)}*${sub(r.description)}*${r.id || ""}`).join("/");
-    return `#List|${sub(m.header)}|${sub(m.body)}|${sub(m.list.buttonText)}|${rows}`;
-  }
-  if (m.kind === "carousel") {
-    return "#carousel|" + m.cards.map((c) => {
+    out = `#List|${sub(m.header)}|${sub(m.body)}|${sub(m.list.buttonText)}|${rows}`;
+  } else if (m.kind === "carousel") {
+    out = "#carousel|" + m.cards.map((c) => {
       const btns = (c.buttons || []).map((b) => `${sub(b.text)}*${b.id || ""}`).join("/");
       return `${c.image || ""}|${sub(c.title)}|${sub(c.description)}|${btns}`;
     }).join("||");
+  } else {
+    out = sub(m.body); // text / image — body is the message
   }
-  // text / image — no command, just the body
-  return sub(m.body);
+  // A second macro pass catches macros that themselves contain {{macro:...}} fragments.
+  return expandMacros(out);
 }
 
 // Build the JSON body our /api/stevo/send endpoint accepts.
@@ -701,17 +768,28 @@ function previewHTML(m) {
 }
 
 function buttonsEditor(m) {
-  const rows = m.buttons.map((b, i) => `
+  const others = state.messages.filter((x) => x.id !== m.id && x.status !== "archived");
+  const chainOpts = others.map((om) => `<option value="${esc(om.id)}" ${m.buttons.some((b) => b.id === ID_CHAIN_PREFIX + om.id) ? "" : ""}>${esc(om.title)} (${esc(om.day)})</option>`).join("");
+  const rows = m.buttons.map((b, i) => {
+    const chainTarget = (b.id || "").startsWith(ID_CHAIN_PREFIX) ? b.id.slice(ID_CHAIN_PREFIX.length) : "";
+    return `
     <div class="builder-row" data-bi="${i}">
       <input class="input" data-b="text" placeholder="${esc(t("Texto do botão", "Button text"))}" value="${esc(b.text || "")}">
       <input class="input" data-b="id" placeholder="ID (ex: quero_plano_a)" value="${esc(b.id || "")}">
+      ${idBadge(b.id)}
+      <select class="select select--chain" data-bchain="${i}" title="${esc(t("Encadear para outra mensagem", "Chain to another message"))}">
+        <option value="">→ ${t("encadear", "chain")}</option>
+        ${others.map((om) => `<option value="${esc(om.id)}" ${chainTarget === om.id ? "selected" : ""}>${esc(om.title)} (${esc(om.day)})</option>`).join("")}
+      </select>
       <button class="btn btn--ghost btn--sm" data-bx="${i}" aria-label="remove">✕</button>
-    </div>`).join("");
+    </div>`;
+  }).join("");
   const full = m.buttons.length >= 3;
   return `<div class="builder">
     <div class="builder__title">${t("Botões", "Buttons")} <span class="muted">${m.buttons.length}/3</span></div>
     ${rows || `<p class="muted" style="font-size:.84rem">${t("Nenhum botão ainda. Adicione até 3.", "No buttons yet. Add up to 3.")}</p>`}
     <button class="btn btn--soft btn--sm" id="b-add" ${full ? "disabled" : ""}>+ ${t("Adicionar botão", "Add button")}</button>
+    <div class="muted mt" style="font-size:.74rem;line-height:1.4">${t("Padrão de ID sugerido", "Suggested ID pattern")}: <code>acao_topico_variante</code> · ${t("ou use", "or use")} <code>chain:msg-id</code> ${t("para encadear", "to chain")}</div>
   </div>`;
 }
 
@@ -720,6 +798,7 @@ function listEditor(m) {
     <div class="builder-row builder-row--list" data-li="${i}">
       <input class="input" data-l="title" placeholder="${esc(t("Título do item", "Item title"))}" value="${esc(r.title || "")}">
       <input class="input" data-l="id" placeholder="ID" value="${esc(r.id || "")}">
+      ${idBadge(r.id)}
       <input class="input" data-l="description" placeholder="${esc(t("Descrição (opcional)", "Description (optional)"))}" value="${esc(r.description || "")}">
       <button class="btn btn--ghost btn--sm" data-lx="${i}" aria-label="remove">✕</button>
     </div>`).join("");
@@ -746,14 +825,18 @@ function carouselEditor(m) {
         <div class="builder-row">
           <input class="input" data-cb="${j}" data-cbf="text" placeholder="${esc(t("Texto", "Text"))}" value="${esc(b.text || "")}">
           <input class="input" data-cb="${j}" data-cbf="id" placeholder="ID" value="${esc(b.id || "")}">
+          ${idBadge(b.id)}
           <button class="btn btn--ghost btn--sm" data-cbx="${j}" aria-label="remove">✕</button>
         </div>`).join("")}
       <button class="btn btn--soft btn--sm" data-cba ${((c.buttons || []).length >= 3) ? "disabled" : ""}>+ ${t("Botão", "Button")}</button>
     </div>`).join("");
   const full = m.cards.length >= 10;
   return `<div class="builder">
-    <div class="builder__title">${t("Cards", "Cards")} <span class="muted">${m.cards.length}/10</span></div>
-    ${cards || `<p class="muted" style="font-size:.84rem">${t("Nenhum card ainda. Adicione até 10.", "No cards yet. Add up to 10.")}</p>`}
+    <div class="row between" style="margin-bottom:8px">
+      <div class="builder__title" style="margin:0">${t("Cards", "Cards")} <span class="muted">${m.cards.length}/10</span></div>
+      <button class="btn btn--soft btn--sm" id="c-hydrate" title="${esc(t("Buscar produtos da location no GoHighLevel e preencher cards", "Pull products from this GHL location and fill cards"))}">🛒 ${t("Hidratar do GHL", "Hydrate from GHL")}</button>
+    </div>
+    ${cards || `<p class="muted" style="font-size:.84rem">${t("Nenhum card ainda. Adicione até 10 — ou hidrate dos produtos da location.", "No cards yet. Add up to 10 — or hydrate from the location's products.")}</p>`}
     <button class="btn btn--soft btn--sm" id="c-add" ${full ? "disabled" : ""}>+ ${t("Adicionar card", "Add card")}</button>
   </div>`;
 }
@@ -788,7 +871,10 @@ function messageEditor(id) {
   return `
     <div class="row between mb">
       <h1 class="section-title" style="margin:0">${t("Configurar Comando", "Configure Command")}</h1>
-      <a class="btn btn--ghost btn--sm" href="#/library?day=${m.day}">← ${t("Biblioteca", "Library")}</a>
+      <div class="row" style="gap:8px">
+        <button class="btn btn--ghost btn--sm" id="ed-import">📥 ${t("Importar comando", "Import command")}</button>
+        <a class="btn btn--ghost btn--sm" href="#/library?day=${m.day}">← ${t("Biblioteca", "Library")}</a>
+      </div>
     </div>
 
     <div class="card kind-card mb">
@@ -823,6 +909,9 @@ function messageEditor(id) {
             <input class="input" id="ed-image" placeholder="https://..." value="${esc(m.image || "")}"></div>` : ""}
         <label class="field" style="margin-bottom:4px"><span style="font-size:.78rem;font-weight:600;color:var(--muted)">${t("Inserir variável", "Insert variable")}</span></label>
         <div class="var-row">${vars}</div>
+        ${macrosList().length ? `
+          <label class="field" style="margin-bottom:4px;margin-top:8px"><span style="font-size:.78rem;font-weight:600;color:var(--muted)">${t("Macros (Configurações)", "Macros (Settings)")}</span></label>
+          <div class="var-row">${macrosList().map((mk) => `<button class="var-chip var-chip--macro" data-macro="${esc(mk.name)}" title="${esc(mk.value)}">{{macro:${esc(mk.name)}}}</button>`).join("")}</div>` : ""}
         <div class="field"><label>${m.kind === "image" ? t("Legenda (opcional)", "Caption (optional)") : t("Descrição (corpo)", "Description (body)")}</label>
           <textarea class="textarea" id="ed-body" rows="6">${esc(m.body || "")}</textarea></div>
         ${extra}
@@ -1048,6 +1137,25 @@ screens.settings = () => {
         ${fields}
         <button class="btn btn--soft mt" id="set-save-all">Save all settings</button>
       </div>
+      <div class="card">
+        <div class="panel-title">${t("Macros de comando", "Command macros")}</div>
+        <p class="muted mb" style="font-size:.82rem">${t("Fragmentos reaproveitáveis. Use", "Reusable fragments. Use")} <code>{{macro:nome}}</code> ${t("em qualquer mensagem para expandir no envio.", "in any message to expand at send time.")}</p>
+        <div id="set-macros">
+        ${(s.macros || []).map((mk, i) => `
+          <div class="builder-row" data-mi="${i}">
+            <input class="input" data-mf="name" value="${esc(mk.name)}" placeholder="${esc(t("nome (ex: opt_in_3)", "name (e.g. opt_in_3)"))}" style="flex:0 0 150px">
+            <input class="input" data-mf="value" value="${esc(mk.value)}" placeholder="${esc(t("ex: Sim*sim_keep/Não*sim_stop", "e.g. Yes*yes_keep/No*yes_stop"))}">
+            <button class="btn btn--ghost btn--sm" data-mx="${i}">✕</button>
+          </div>`).join("")}
+        </div>
+        <button class="btn btn--soft btn--sm mt" id="set-macro-add">+ ${t("Adicionar macro", "Add macro")}</button>
+      </div>
+      <div class="card">
+        <div class="panel-title">${t("Encadeamento (chain) — exportar p/ TENANTS", "Chain — export for TENANTS")}</div>
+        <p class="muted mb" style="font-size:.82rem">${t("IDs no formato chain:msg-id fazem o webhook disparar outra mensagem automaticamente. Esses comandos precisam estar no env TENANTS[location].chainMessages para o webhook conseguir achá-los. Copie o JSON abaixo e cole na config do tenant.", "IDs in chain:msg-id format make the webhook fire another message automatically. Those commands must live in the TENANTS[location].chainMessages env so the webhook can resolve them. Copy the JSON below and paste into the tenant config.")}</p>
+        <pre id="set-chain-export" class="cmd-pre" style="max-height:200px">${esc(JSON.stringify(state.messages.reduce((acc, m) => { acc[m.id] = buildStevoCommand(m); return acc; }, {}), null, 2))}</pre>
+        <button class="btn btn--soft btn--sm mt" id="set-chain-copy">📋 ${t("Copiar chainMessages", "Copy chainMessages")}</button>
+      </div>
     </div>`;
 };
 
@@ -1149,12 +1257,41 @@ function wire(route, params) {
         if (chip.dataset.kind === m.kind) return;
         m.kind = chip.dataset.kind; persist(); render();
       });
-      // variable chips
+      // variable / macro chips — insert into the body textarea
       root.querySelectorAll(".var-chip").forEach((c) => c.onclick = () => {
-        const v = c.dataset.var, body = $("#ed-body"); if (!body) return;
+        const v = c.dataset.var || (c.dataset.macro ? `{{macro:${c.dataset.macro}}}` : "");
+        const body = $("#ed-body"); if (!body || !v) return;
         const s = body.selectionStart ?? body.value.length;
         body.value = body.value.slice(0, s) + v + body.value.slice(s); body.focus();
         body.dispatchEvent(new Event("input"));
+      });
+      // Import command — paste a #bt|... / #List|... / #carousel|... and reverse-parse it
+      const imp = $("#ed-import");
+      imp && (imp.onclick = () => {
+        // Captured via closure: the modal helper closes the DOM before onConfirm runs,
+        // so we mirror the textarea value into `captured` on each input.
+        let captured = "";
+        modal({
+          title: t("Importar comando do Stevo", "Import Stevo command"),
+          body: `<textarea class="textarea" id="ed-import-text" rows="6" placeholder="${esc(t("Cole aqui um comando, ex: #bt|Título|Descrição|Rodapé|Sim*sim_yes/Não*sim_no", "Paste a command, e.g.: #bt|Title|Description|Footer|Yes*yes_id/No*no_id"))}" style="width:100%"></textarea>
+            <p class="muted mt" style="font-size:.78rem">${t("Os campos atuais serão substituídos pelos do comando importado.", "The current fields will be overwritten by the imported command.")}</p>`,
+          confirmLabel: t("Importar", "Import"),
+          onConfirm: () => {
+            const parsed = parseStevoCommand(captured);
+            if (!parsed) { toast(t("Comando vazio ou inválido.", "Empty or invalid command."), true); return; }
+            Object.assign(m, parsed);
+            normalizeMsg(m); persist(); toast(t("Comando importado.", "Command imported.")); render();
+          }
+        });
+        // pre-fill the textarea with the current command so the user can also "round-trip" edit
+        setTimeout(() => {
+          const ta = document.querySelector("#ed-import-text");
+          if (ta) {
+            ta.value = buildStevoCommand(m); captured = ta.value;
+            ta.addEventListener("input", () => { captured = ta.value; });
+            ta.focus(); ta.select();
+          }
+        }, 30);
       });
       // ---- per-kind editors ----
       if (m.kind === "button") {
@@ -1162,6 +1299,12 @@ function wire(route, params) {
           const i = +row.dataset.bi;
           row.querySelectorAll("input[data-b]").forEach((inp) => inp.addEventListener("input", () => { m.buttons[i][inp.dataset.b] = inp.value; persist(); refresh(); }));
           const x = row.querySelector("[data-bx]"); x && (x.onclick = () => { m.buttons.splice(i, 1); persist(); render(); });
+          // chain picker → sets the button's ID to "chain:<target message id>"
+          const chain = row.querySelector("[data-bchain]");
+          chain && (chain.onchange = () => {
+            if (!chain.value) { m.buttons[i].id = ""; persist(); render(); return; }
+            m.buttons[i].id = ID_CHAIN_PREFIX + chain.value; persist(); render();
+          });
         });
         const add = $("#b-add"); add && (add.onclick = () => { if (m.buttons.length >= 3) return; m.buttons.push({ id: "", text: "" }); persist(); render(); });
       }
@@ -1191,6 +1334,24 @@ function wire(route, params) {
           cba && (cba.onclick = () => { m.cards[i].buttons = m.cards[i].buttons || []; if (m.cards[i].buttons.length >= 3) return; m.cards[i].buttons.push({ id: "", text: "" }); persist(); render(); });
         });
         const add = $("#c-add"); add && (add.onclick = () => { if (m.cards.length >= 10) return; m.cards.push({ image: "", title: "", description: "", buttons: [] }); persist(); render(); });
+        // hydrate from GoHighLevel products → fill up to 10 carousel cards
+        const hyd = $("#c-hydrate");
+        hyd && (hyd.onclick = async () => {
+          hyd.disabled = true; const orig = hyd.textContent; hyd.textContent = t("Buscando…", "Fetching…");
+          try {
+            const res = await jpost("/api/ghl/products", { locationId: state.settings.locationId || "" });
+            const products = (res && (res.products || res.items || res.data)) || [];
+            if (!products.length) { toast(res && res.mock ? t("Sem produtos no GHL — modo mock.", "No GHL products — mock mode.") : t("Nenhum produto encontrado.", "No products found."), true); return; }
+            m.cards = products.slice(0, 10).map((p) => ({
+              image: p.image || p.imageUrl || (p.images && p.images[0]) || "",
+              title: p.name || p.title || "",
+              description: p.description || p.subtitle || "",
+              buttons: [{ text: t("Ver", "View"), id: `ver_produto_${(p.id || "").replace(/[^a-z0-9]/gi, "").slice(0, 12).toLowerCase() || "x"}` }]
+            }));
+            persist(); toast(t("Cards hidratados.", "Cards hydrated.")); render();
+          } catch (e) { toast("Hydrate failed: " + e.message, true); }
+          finally { hyd.disabled = false; hyd.textContent = orig; }
+        });
       }
       // save + copy command
       $("#ed-save").onclick = () => { m.version += 1; m.edited = new Date().toISOString(); persist(); toast(t("Mensagem salva (v", "Message saved (v") + m.version + ")."); location.hash = `#/library?day=${m.day}`; };
@@ -1377,6 +1538,25 @@ function wire(route, params) {
       state.settings.engagement = { flagAfter: flagAfter > 0 ? flagAfter : 3, flagTag: engCfg().flagTag };
       const ch = $("#set-channel"); if (ch) state.settings.channel = ch.value;
       persist(); toast("Settings saved."); render();
+    });
+    // Macros editor — list of {name,value} rows
+    state.settings.macros = state.settings.macros || [];
+    root.querySelectorAll("#set-macros [data-mi]").forEach((row) => {
+      const i = +row.dataset.mi;
+      row.querySelectorAll("input[data-mf]").forEach((inp) => inp.addEventListener("input", () => {
+        state.settings.macros[i] = state.settings.macros[i] || { name: "", value: "" };
+        state.settings.macros[i][inp.dataset.mf] = inp.value; persist();
+      }));
+      const x = row.querySelector("[data-mx]"); x && (x.onclick = () => { state.settings.macros.splice(i, 1); persist(); render(); });
+    });
+    const macroAdd = $("#set-macro-add");
+    macroAdd && (macroAdd.onclick = () => { state.settings.macros.push({ name: "", value: "" }); persist(); render(); });
+    // Copy chainMessages JSON for TENANTS
+    const chainCopy = $("#set-chain-copy");
+    chainCopy && (chainCopy.onclick = async () => {
+      const txt = $("#set-chain-export").textContent;
+      try { await navigator.clipboard.writeText(txt); toast(t("chainMessages copiado.", "chainMessages copied.")); }
+      catch { toast(t("Falha ao copiar.", "Copy failed."), true); }
     });
   }
 

@@ -14,6 +14,9 @@
 //         "quero_plano_a": "plano-a",
 //         "quero_plano_b": "plano-b",
 //         "so_info":       "lead-frio"
+//       },
+//       "chainMessages": {                          // msg-id -> Stevo command string
+//         "msg-abc123": "#bt|Próximo passo|Qual sua escolha?|.|Mensal*plano_mensal_a/Anual*plano_anual_a"
 //       }
 //     }
 //   }
@@ -40,7 +43,8 @@ function all() {
       stevoApiBase: process.env.STEVO_API_BASE,
       stevoApiKey: process.env.STEVO_APIKEY,
       stevoReady: process.env.STEVO_READY === "1",
-      routes: {}
+      routes: {},
+      chainMessages: {}
     };
   }
   CACHE = map;
@@ -58,7 +62,8 @@ function tenant(locationId) {
     stevoApiBase: (t.stevoApiBase || "").replace(/\/$/, ""),
     stevoApiKey: t.stevoApiKey || "",
     stevoReady: Boolean(t.stevoReady),
-    routes: t.routes || {}
+    routes: t.routes || {},
+    chainMessages: t.chainMessages || {}
   };
 }
 

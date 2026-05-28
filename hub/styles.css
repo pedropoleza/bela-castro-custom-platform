@@ -325,6 +325,36 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.84rem; white-sp
 /* smooth details (advanced filters / edit) open */
 details.advanced > summary { transition: color 0.2s var(--ease); }
 
+/* ---------- Stevo command builder ---------- */
+.builder { border: 1px dashed var(--line-2); border-radius: 10px; padding: 12px; margin-top: 12px; background: color-mix(in srgb, var(--card) 96%, var(--accent) 4%); }
+.builder__title { font-size: 0.82rem; font-weight: 600; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.02em; text-transform: uppercase; }
+.builder-row { display: flex; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.builder-row .input { flex: 1; min-width: 140px; }
+.builder-row .input[data-b="id"], .builder-row .input[data-l="id"], .builder-row .input[data-cbf="id"] { flex: 0 0 110px; min-width: 90px; }
+.builder-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; background: var(--card); }
+
+/* WhatsApp-style live preview */
+.wa-preview { background: #ece5dd; border-radius: 12px; padding: 14px; min-height: 80px; }
+.wa-bubble { background: #fff; border-radius: 8px; padding: 10px 12px; box-shadow: 0 1px 1px rgba(0,0,0,0.08); max-width: 100%; word-wrap: break-word; }
+.wa-bubble .wa-head { font-weight: 700; margin-bottom: 4px; color: #111; }
+.wa-bubble .wa-body { font-size: 0.92rem; color: #222; line-height: 1.45; white-space: pre-wrap; }
+.wa-bubble .wa-foot { font-size: 0.74rem; color: #888; margin-top: 6px; }
+.wa-bubble .wa-img { margin: -10px -12px 8px; border-radius: 8px 8px 0 0; overflow: hidden; }
+.wa-bubble .wa-img img { width: 100%; display: block; max-height: 180px; object-fit: cover; }
+.wa-buttons { margin-top: 8px; border-top: 1px solid #e0e0e0; display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+.wa-btn { background: #fff; border: 1px solid #d8d8d8; color: #00a5f4; text-align: center; padding: 8px; border-radius: 6px; font-weight: 600; font-size: 0.88rem; }
+.wa-list { margin-top: 8px; border-top: 1px solid #e0e0e0; padding-top: 8px; }
+.wa-list-btn { background: #fff; border: 1px solid #d8d8d8; color: #00a5f4; text-align: center; padding: 8px; border-radius: 6px; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; }
+.wa-list-row { padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.86rem; }
+.wa-list-row:last-child { border-bottom: 0; }
+.wa-carousel { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding-bottom: 4px; }
+.wa-card { flex: 0 0 220px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 1px rgba(0,0,0,0.08); padding: 0 0 8px; }
+.wa-card .wa-img { margin: 0; border-radius: 0; }
+.wa-card .wa-img img { max-height: 120px; }
+.wa-card .wa-head, .wa-card .wa-body { padding: 0 10px; }
+.wa-card .wa-head { padding-top: 10px; }
+.wa-card .wa-buttons { padding: 8px 10px 0; margin-top: 8px; }
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }

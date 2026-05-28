@@ -269,21 +269,18 @@ async function dripSend({ msg, wfId, eligible, f, logDispatch, button }) {
   const summary = document.getElementById("aud-summary");
   for (let b = 0; b < chunks.length; b++) {
     if (channel === "stevo") {
-      // Stevo messages are always sent in button format (per Stevo Manager v2 docs:
-      // /send/button), each carrying the "keep receiving" opt-in button so the
-      // contact can always confirm engagement. The last allowed attempt before
-      // auto-flagging adds an explicit re-opt-in nudge.
+      // Build the Stevo payload from the message's authored kind (text/button/list/carousel/image).
+      // On the last allowed attempt before auto-flagging, force a button with the re-opt-in nudge.
       for (const c of chunks[b]) {
-        const isLastChance = (c.noReplyCount || 0) === flagAfter - 1; // final re-opt-in warning
-        const text = renderMessage(msg.body, c) + (isLastChance
-          ? "\n\nVocê ainda quer receber essas mensagens? Toque no botão abaixo 👇"
-          : "");
-        const r = await api.stevoSend({
-          kind: "button",
-          number: c.phone, text,
-          footer: state.settings.stevoFooter || "",
-          buttons: [{ id: "keep_receiving", text: t("Quero continuar recebendo", "Keep me subscribed") }]
-        });
+        const isLastChance = (c.noReplyCount || 0) === flagAfter - 1;
+        let payload = buildStevoPayload(msg, c, isLastChance);
+        if (isLastChance && payload.kind !== "button") {
+          payload = { kind: "button", text: payload.text, title: msg.header || "", footer: msg.footer || "", image: msg.image || "",
+            buttons: [{ id: "keep_receiving", text: t("Quero continuar recebendo", "Keep me subscribed") }] };
+        }
+        payload.number = c.phone;
+        if (state.settings.locationId) payload.locationId = state.settings.locationId;
+        const r = await api.stevoSend(payload);
         if (r && r.pending) pending++;
         else if (r && r.error) failed++;
         else sent++;
@@ -546,7 +543,11 @@ screens.library = (params) => {
     const rows = msgs.length ? msgs.map((m) => `
       <div class="list-item">
         <div style="min-width:0">
-          <div class="row" style="gap:8px"><strong>${esc(m.title)}</strong><span class="pill ${statusClass(m.status)}">${m.status}</span></div>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <strong>${esc(m.title)}</strong>
+            <span class="pill pill--muted">${esc(KIND_LABEL(m.kind || "text"))}</span>
+            <span class="pill ${statusClass(m.status)}">${m.status}</span>
+          </div>
           <div class="muted" style="font-size:.8rem">${m.channel} · v${m.version} · edited ${fmtDate(m.edited)}</div>
         </div>
         <div class="row" style="gap:6px">
@@ -564,39 +565,188 @@ screens.library = (params) => {
   return `<h1 class="section-title">${t("Mensagens", "Message Library")}</h1><p class="section-sub">${t("Crie e gerencie variações de mensagem para cada dia.", "Create and manage message variations for each weekday.")} ${day ? `${t("Filtrado por", "Filtered to")} <strong>${esc(day)}</strong> · <a href="#/library" style="color:var(--accent)">${t("ver todas", "show all")}</a>` : t("Use variáveis para personalizar cada mensagem.", "Use placeholders to personalize each message.")}</p>${groups}`;
 };
 
+/* ---------------- Stevo command builder (replicates cmd.stevo.chat) ---------------- */
+const KINDS = ["text", "button", "list", "carousel", "image"];
+const KIND_LABEL = (k) => ({
+  text: t("Texto", "Text"),
+  button: t("Botões de Resposta (até 3)", "Reply Buttons (max 3)"),
+  list: t("Lista (até 10 itens)", "List (max 10 rows)"),
+  carousel: t("Carrossel (até 10 cards)", "Carousel (max 10 cards)"),
+  image: t("Imagem", "Image")
+})[k] || k;
+
+function normalizeMsg(m) {
+  if (!m.kind) m.kind = "text";
+  if (!Array.isArray(m.buttons)) m.buttons = [];
+  if (!m.list || typeof m.list !== "object") m.list = { buttonText: "", sections: [{ title: "", rows: [] }] };
+  if (!Array.isArray(m.list.sections) || !m.list.sections.length) m.list.sections = [{ title: "", rows: [] }];
+  if (!Array.isArray(m.list.sections[0].rows)) m.list.sections[0].rows = [];
+  if (!Array.isArray(m.cards)) m.cards = [];
+  if (m.header == null) m.header = "";
+  if (m.footer == null) m.footer = "";
+  if (m.image == null) m.image = "";
+  return m;
+}
+
+function buildStevoPayload(m, contact, lastChance) {
+  normalizeMsg(m);
+  const k = m.kind;
+  const text = renderMessage(m.body || "", contact) + (lastChance
+    ? "\n\n" + t("Você ainda quer receber essas mensagens? Toque no botão abaixo 👇", "Do you still want these messages? Tap the button below 👇")
+    : "");
+  const base = { kind: k, text };
+  if (k === "button")   return { ...base, title: m.header || "", footer: m.footer || "", image: m.image || "", buttons: m.buttons };
+  if (k === "list")     return { ...base, title: m.header || "", footer: m.footer || "", list: m.list };
+  if (k === "carousel") return { ...base, cards: m.cards };
+  if (k === "image")    return { ...base, image: m.image || "" };
+  return base;
+}
+
+function stevoCommand(m, number) {
+  const payload = buildStevoPayload(m, SAMPLE_CONTACT, false);
+  if (number) payload.number = number;
+  return JSON.stringify(payload, null, 2);
+}
+
+function previewHTML(m) {
+  normalizeMsg(m);
+  const txt = esc(renderMessage(m.body || "")).replace(/\n/g, "<br>");
+  const head = m.header ? `<div class="wa-head">${esc(m.header)}</div>` : "";
+  const foot = m.footer ? `<div class="wa-foot">${esc(m.footer)}</div>` : "";
+  const img  = (m.image && m.kind !== "carousel") ? `<div class="wa-img"><img src="${esc(m.image)}" alt=""></div>` : "";
+  let extras = "";
+  if (m.kind === "button") {
+    extras = `<div class="wa-buttons">${m.buttons.map((b) => `<div class="wa-btn">${esc(b.text || "")}</div>`).join("")}</div>`;
+  } else if (m.kind === "list") {
+    const rows = m.list.sections[0].rows;
+    extras = `<div class="wa-list">
+      <div class="wa-list-btn">📋 ${esc(m.list.buttonText || t("Ver opções", "See options"))}</div>
+      ${rows.map((r) => `<div class="wa-list-row"><strong>${esc(r.title || "")}</strong>${r.description ? `<div class="muted" style="font-size:.78rem">${esc(r.description)}</div>` : ""}</div>`).join("")}
+    </div>`;
+  } else if (m.kind === "carousel") {
+    extras = `<div class="wa-carousel">${m.cards.map((c) => `
+      <div class="wa-card">
+        ${c.image ? `<div class="wa-img"><img src="${esc(c.image)}" alt=""></div>` : ""}
+        ${c.title ? `<div class="wa-head">${esc(c.title)}</div>` : ""}
+        ${c.description ? `<div class="wa-body">${esc(c.description).replace(/\n/g, "<br>")}</div>` : ""}
+        ${(c.buttons || []).length ? `<div class="wa-buttons">${c.buttons.map((b) => `<div class="wa-btn">${esc(b.text || "")}</div>`).join("")}</div>` : ""}
+      </div>`).join("")}</div>`;
+  }
+  return `<div class="wa-bubble">${img}${head}<div class="wa-body">${txt || `<span class="muted">${esc(t("(sem texto)", "(no text)"))}</span>`}</div>${foot}${extras}</div>`;
+}
+
+function buttonsEditor(m) {
+  const rows = m.buttons.map((b, i) => `
+    <div class="builder-row" data-bi="${i}">
+      <input class="input" data-b="text" placeholder="${esc(t("Texto do botão", "Button text"))}" value="${esc(b.text || "")}">
+      <input class="input" data-b="id" placeholder="ID" value="${esc(b.id || "")}">
+      <button class="btn btn--ghost btn--sm" data-bx="${i}" aria-label="remove">✕</button>
+    </div>`).join("");
+  const full = m.buttons.length >= 3;
+  return `<div class="builder">
+    <div class="builder__title">${t("Botões (máx. 3)", "Buttons (max 3)")}</div>
+    ${rows || `<p class="muted" style="font-size:.84rem">${t("Nenhum botão ainda.", "No buttons yet.")}</p>`}
+    <button class="btn btn--soft btn--sm" id="b-add" ${full ? "disabled" : ""}>+ ${t("Adicionar botão", "Add button")}</button>
+  </div>`;
+}
+
+function listEditor(m) {
+  const rows = m.list.sections[0].rows.map((r, i) => `
+    <div class="builder-row" data-li="${i}">
+      <input class="input" data-l="title" placeholder="${esc(t("Título do item", "Item title"))}" value="${esc(r.title || "")}">
+      <input class="input" data-l="id" placeholder="ID" value="${esc(r.id || "")}">
+      <input class="input" data-l="description" placeholder="${esc(t("Descrição (opcional)", "Description (optional)"))}" value="${esc(r.description || "")}">
+      <button class="btn btn--ghost btn--sm" data-lx="${i}" aria-label="remove">✕</button>
+    </div>`).join("");
+  const full = m.list.sections[0].rows.length >= 10;
+  return `<div class="builder">
+    <div class="builder__title">${t("Itens da Lista (máx. 10)", "List items (max 10)")}</div>
+    <div class="field"><label>${t("Texto do botão da lista", "List button label")}</label>
+      <input class="input" id="ed-listbtn" value="${esc(m.list.buttonText || "")}" placeholder="${esc(t("Ex: Ver opções", "E.g. See options"))}"></div>
+    ${rows || `<p class="muted" style="font-size:.84rem">${t("Nenhum item ainda.", "No items yet.")}</p>`}
+    <button class="btn btn--soft btn--sm" id="l-add" ${full ? "disabled" : ""}>+ ${t("Adicionar item", "Add item")}</button>
+  </div>`;
+}
+
+function carouselEditor(m) {
+  const cards = m.cards.map((c, i) => `
+    <div class="builder-card" data-ci="${i}">
+      <div class="row between"><strong>${t("Card", "Card")} ${i + 1}</strong>
+        <button class="btn btn--ghost btn--sm" data-cx="${i}">✕ ${t("remover", "remove")}</button></div>
+      <div class="field"><label>${t("Imagem (URL)", "Image (URL)")}</label><input class="input" data-c="image" value="${esc(c.image || "")}"></div>
+      <div class="field"><label>${t("Título", "Title")}</label><input class="input" data-c="title" value="${esc(c.title || "")}"></div>
+      <div class="field"><label>${t("Descrição", "Description")}</label><textarea class="textarea" data-c="description" rows="2">${esc(c.description || "")}</textarea></div>
+      <div class="muted" style="font-size:.78rem;margin-bottom:4px">${t("Botões do card (máx. 3)", "Card buttons (max 3)")}</div>
+      ${(c.buttons || []).map((b, j) => `
+        <div class="builder-row">
+          <input class="input" data-cb="${j}" data-cbf="text" placeholder="${esc(t("Texto", "Text"))}" value="${esc(b.text || "")}">
+          <input class="input" data-cb="${j}" data-cbf="id" placeholder="ID" value="${esc(b.id || "")}">
+          <button class="btn btn--ghost btn--sm" data-cbx="${j}" aria-label="remove">✕</button>
+        </div>`).join("")}
+      <button class="btn btn--soft btn--sm" data-cba ${((c.buttons || []).length >= 3) ? "disabled" : ""}>+ ${t("Botão", "Button")}</button>
+    </div>`).join("");
+  const full = m.cards.length >= 10;
+  return `<div class="builder">
+    <div class="builder__title">${t("Cards (máx. 10)", "Cards (max 10)")}</div>
+    ${cards || `<p class="muted" style="font-size:.84rem">${t("Nenhum card ainda.", "No cards yet.")}</p>`}
+    <button class="btn btn--soft btn--sm" id="c-add" ${full ? "disabled" : ""}>+ ${t("Adicionar card", "Add card")}</button>
+  </div>`;
+}
+
 function messageEditor(id) {
   const m = state.messages.find((x) => x.id === id);
-  if (!m) return `<p class="muted">Message not found. <a href="#/library" style="color:var(--accent)">Back to library</a></p>`;
+  if (!m) return `<p class="muted">${t("Mensagem não encontrada.", "Message not found.")} <a href="#/library" style="color:var(--accent)">${t("Voltar", "Back")}</a></p>`;
+  normalizeMsg(m);
   const def = DAY_DEFS.find((d) => d.day === m.day);
   const vars = VARIABLES.map((v) => `<button class="var-chip" data-var="${esc(v)}">${esc(v)}</button>`).join("");
+  const showHeaderFooter = m.kind === "button" || m.kind === "list";
+  const showImageField   = m.kind !== "carousel";
+  const extra = m.kind === "button" ? buttonsEditor(m)
+              : m.kind === "list" ? listEditor(m)
+              : m.kind === "carousel" ? carouselEditor(m) : "";
   return `
-    <div class="row between mb"><h1 class="section-title" style="margin:0">Message Editor</h1><a class="btn btn--ghost btn--sm" href="#/library?day=${m.day}">← Library</a></div>
+    <div class="row between mb">
+      <h1 class="section-title" style="margin:0">${t("Editor de Mensagem", "Message Editor")}</h1>
+      <a class="btn btn--ghost btn--sm" href="#/library?day=${m.day}">← ${t("Biblioteca", "Library")}</a>
+    </div>
     <div class="split split--editor">
       <div class="card">
-        <div class="field"><label>Title</label><input class="input" id="ed-title" value="${esc(m.title)}"></div>
+        <div class="field"><label>${t("Título interno", "Internal title")}</label><input class="input" id="ed-title" value="${esc(m.title)}"></div>
         <div class="row" style="gap:12px">
-          <div class="field" style="flex:1"><label>Weekday</label>
+          <div class="field" style="flex:1"><label>${t("Dia", "Weekday")}</label>
             <select class="select" id="ed-day">${DAY_DEFS.map((d) => `<option ${d.day === m.day ? "selected" : ""}>${d.day}</option>`).join("")}</select></div>
-          <div class="field" style="flex:1"><label>Channel</label>
+          <div class="field" style="flex:1"><label>${t("Canal", "Channel")}</label>
             <select class="select" id="ed-channel">${["WhatsApp", "SMS", "Email"].map((c) => `<option ${c === m.channel ? "selected" : ""}>${c}</option>`).join("")}</select></div>
-          <div class="field" style="flex:1"><label>Status</label>
+          <div class="field" style="flex:1"><label>${t("Status", "Status")}</label>
             <select class="select" id="ed-status">${["draft", "ready", "scheduled", "paused"].map((s) => `<option ${s === m.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
         </div>
-        <div class="field" style="margin-bottom:6px"><label>Theme · ${esc(def.theme)}</label>
-          <input class="input" id="ed-obj" value="${esc(def.objective)}" readonly style="opacity:.7"></div>
-        <label class="field" style="margin-bottom:4px"><span style="font-size:.78rem;font-weight:600;color:var(--muted)">Insert variable</span></label>
+        <div class="field"><label>${t("Tipo do Comando", "Command Type")}</label>
+          <select class="select" id="ed-kind">${KINDS.map((k) => `<option value="${k}" ${k === m.kind ? "selected" : ""}>${esc(KIND_LABEL(k))}</option>`).join("")}</select></div>
+        ${showHeaderFooter ? `
+          <div class="row" style="gap:12px">
+            <div class="field" style="flex:1"><label>${t("Título", "Title")}</label><input class="input" id="ed-header" value="${esc(m.header)}"></div>
+            <div class="field" style="flex:1"><label>${t("Rodapé", "Footer")}</label><input class="input" id="ed-footer" value="${esc(m.footer)}"></div>
+          </div>` : ""}
+        ${showImageField ? `
+          <div class="field"><label><input type="checkbox" id="ed-img-toggle" ${m.image || m.kind === "image" ? "checked" : ""}> ${t("Incluir Imagem", "Include Image")}</label>
+            <input class="input" id="ed-image" placeholder="https://..." value="${esc(m.image || "")}" style="${m.image || m.kind === "image" ? "" : "display:none;"}margin-top:6px"></div>` : ""}
+        <label class="field" style="margin-bottom:4px"><span style="font-size:.78rem;font-weight:600;color:var(--muted)">${t("Inserir variável", "Insert variable")}</span></label>
         <div class="var-row">${vars}</div>
-        <div class="field"><label>Message body</label><textarea class="textarea" id="ed-body" rows="9">${esc(m.body)}</textarea></div>
-        <div class="row" style="gap:10px">
-          <button class="btn btn--primary" id="ed-save">Save message</button>
-          <span class="muted" style="font-size:.8rem">v${m.version} · created ${fmtDate(m.created)} · edited ${fmtDate(m.edited)}</span>
+        <div class="field"><label>${t("Descrição (corpo)", "Description (body)")}</label><textarea class="textarea" id="ed-body" rows="6">${esc(m.body || "")}</textarea></div>
+        ${extra}
+        <div class="row mt" style="gap:10px;flex-wrap:wrap">
+          <button class="btn btn--primary" id="ed-save">${t("Salvar", "Save")}</button>
+          <button class="btn btn--soft" id="ed-copy">${t("Copiar comando", "Copy command")}</button>
+          <span class="muted" style="font-size:.8rem">${esc(def ? dayTheme(def) : "")} · v${m.version} · ${fmtDate(m.edited)}</span>
         </div>
       </div>
       <div class="card card--glass">
-        <div class="panel-title">Preview <span class="pill pill--muted">sample: ${esc(SAMPLE_CONTACT.first_name)}</span></div>
-        <div class="preview-phone"><div class="bubble" id="ed-preview">${esc(renderMessage(m.body))}</div>
-        <div class="preview-meta">${esc(m.channel)} · to ${esc(SAMPLE_CONTACT.full_name)} · ${esc(SAMPLE_CONTACT.phone)}</div></div>
-        <p class="muted mt" style="font-size:.8rem">Variables resolve per contact at send time. This preview uses a sample contact.</p>
+        <div class="panel-title">${t("Preview do Comando", "Command preview")} <span class="pill pill--muted">${esc(KIND_LABEL(m.kind))}</span></div>
+        <div class="wa-preview" id="ed-preview">${previewHTML(m)}</div>
+        <p class="muted mt" style="font-size:.78rem">${t("As variáveis são resolvidas por contato no envio. Este preview usa um contato de exemplo.", "Variables resolve per contact at send time. This preview uses a sample contact.")}</p>
+        <details class="advanced mt"><summary>${t("Ver payload", "See payload")}</summary>
+          <pre id="ed-payload" style="font-size:.74rem;background:var(--bg);padding:10px;border-radius:8px;overflow:auto;max-height:240px;white-space:pre-wrap;word-break:break-word">${esc(stevoCommand(m))}</pre>
+        </details>
       </div>
     </div>`;
 }
@@ -883,22 +1033,81 @@ function wire(route, params) {
       state.dispatch.messageId = b.dataset.id; toast("Loaded into Dispatch Center."); location.hash = "#/dispatch";
     });
 
-    // editor
+    // editor — full Stevo command builder (text / button / list / carousel / image)
     if (params.get("edit")) {
       const id = params.get("edit");
-      const body = $("#ed-body"), prev = $("#ed-preview");
-      const upd = () => prev.textContent = renderMessage(body.value);
-      body && body.addEventListener("input", upd);
-      root.querySelectorAll(".var-chip").forEach((c) => c.onclick = () => {
-        const v = c.dataset.var; const s = body.selectionStart ?? body.value.length;
-        body.value = body.value.slice(0, s) + v + body.value.slice(s); body.focus(); upd();
+      const m = state.messages.find((x) => x.id === id);
+      if (!m) return;
+      normalizeMsg(m);
+      const refresh = () => {
+        const p = $("#ed-preview"); if (p) p.innerHTML = previewHTML(m);
+        const pay = $("#ed-payload"); if (pay) pay.textContent = stevoCommand(m);
+      };
+      const bindInput = (sel, key) => { const el = $(sel); el && el.addEventListener("input", () => { m[key] = el.value; persist(); refresh(); }); };
+      bindInput("#ed-title", "title"); bindInput("#ed-body", "body");
+      bindInput("#ed-header", "header"); bindInput("#ed-footer", "footer"); bindInput("#ed-image", "image");
+      const selectMap = { "ed-day": "day", "ed-channel": "channel", "ed-status": "status" };
+      Object.keys(selectMap).forEach((id2) => { const el = $("#" + id2); el && el.addEventListener("change", () => { m[selectMap[id2]] = el.value; persist(); refresh(); }); });
+      // include-image toggle
+      const tog = $("#ed-img-toggle");
+      tog && tog.addEventListener("change", () => {
+        const img = $("#ed-image");
+        if (!tog.checked) { m.image = ""; if (img) { img.value = ""; img.style.display = "none"; } }
+        else if (img) img.style.display = "";
+        persist(); refresh();
       });
-      $("#ed-save").onclick = () => {
-        const m = state.messages.find((x) => x.id === id);
-        m.title = $("#ed-title").value.trim() || m.title;
-        m.day = $("#ed-day").value; m.channel = $("#ed-channel").value; m.status = $("#ed-status").value;
-        m.body = body.value; m.version += 1; m.edited = new Date().toISOString();
-        persist(); toast("Message saved (v" + m.version + ")."); location.hash = `#/library?day=${m.day}`;
+      // command type switch (re-renders so the per-kind editor appears)
+      const ks = $("#ed-kind");
+      ks && ks.addEventListener("change", () => { m.kind = ks.value; persist(); render(); });
+      // variable chips
+      root.querySelectorAll(".var-chip").forEach((c) => c.onclick = () => {
+        const v = c.dataset.var, body = $("#ed-body"); if (!body) return;
+        const s = body.selectionStart ?? body.value.length;
+        body.value = body.value.slice(0, s) + v + body.value.slice(s); body.focus();
+        body.dispatchEvent(new Event("input"));
+      });
+      // ---- per-kind editors ----
+      if (m.kind === "button") {
+        root.querySelectorAll("[data-bi]").forEach((row) => {
+          const i = +row.dataset.bi;
+          row.querySelectorAll("input[data-b]").forEach((inp) => inp.addEventListener("input", () => { m.buttons[i][inp.dataset.b] = inp.value; persist(); refresh(); }));
+          const x = row.querySelector("[data-bx]"); x && (x.onclick = () => { m.buttons.splice(i, 1); persist(); render(); });
+        });
+        const add = $("#b-add"); add && (add.onclick = () => { if (m.buttons.length >= 3) return; m.buttons.push({ id: "", text: "" }); persist(); render(); });
+      }
+      if (m.kind === "list") {
+        const lb = $("#ed-listbtn"); lb && lb.addEventListener("input", () => { m.list.buttonText = lb.value; persist(); refresh(); });
+        root.querySelectorAll("[data-li]").forEach((row) => {
+          const i = +row.dataset.li;
+          row.querySelectorAll("input[data-l]").forEach((inp) => inp.addEventListener("input", () => { m.list.sections[0].rows[i][inp.dataset.l] = inp.value; persist(); refresh(); }));
+          const x = row.querySelector("[data-lx]"); x && (x.onclick = () => { m.list.sections[0].rows.splice(i, 1); persist(); render(); });
+        });
+        const add = $("#l-add"); add && (add.onclick = () => { const rs = m.list.sections[0].rows; if (rs.length >= 10) return; rs.push({ id: "", title: "", description: "" }); persist(); render(); });
+      }
+      if (m.kind === "carousel") {
+        root.querySelectorAll("[data-ci]").forEach((card) => {
+          const i = +card.dataset.ci;
+          card.querySelectorAll("[data-c]").forEach((inp) => inp.addEventListener("input", () => { m.cards[i][inp.dataset.c] = inp.value; persist(); refresh(); }));
+          const cx = card.querySelector("[data-cx]"); cx && (cx.onclick = () => { m.cards.splice(i, 1); persist(); render(); });
+          card.querySelectorAll("[data-cb]").forEach((inp) => {
+            const j = +inp.dataset.cb, f = inp.dataset.cbf;
+            inp.addEventListener("input", () => { m.cards[i].buttons = m.cards[i].buttons || []; m.cards[i].buttons[j] = m.cards[i].buttons[j] || { id: "", text: "" }; m.cards[i].buttons[j][f] = inp.value; persist(); refresh(); });
+          });
+          card.querySelectorAll("[data-cbx]").forEach((btn) => {
+            const j = +btn.dataset.cbx;
+            btn.onclick = () => { m.cards[i].buttons.splice(j, 1); persist(); render(); };
+          });
+          const cba = card.querySelector("[data-cba]");
+          cba && (cba.onclick = () => { m.cards[i].buttons = m.cards[i].buttons || []; if (m.cards[i].buttons.length >= 3) return; m.cards[i].buttons.push({ id: "", text: "" }); persist(); render(); });
+        });
+        const add = $("#c-add"); add && (add.onclick = () => { if (m.cards.length >= 10) return; m.cards.push({ image: "", title: "", description: "", buttons: [] }); persist(); render(); });
+      }
+      // save + copy command
+      $("#ed-save").onclick = () => { m.version += 1; m.edited = new Date().toISOString(); persist(); toast(t("Mensagem salva (v", "Message saved (v") + m.version + ")."); location.hash = `#/library?day=${m.day}`; };
+      $("#ed-copy").onclick = async () => {
+        const txt = stevoCommand(m);
+        try { await navigator.clipboard.writeText(txt); toast(t("Comando copiado.", "Command copied.")); }
+        catch { toast(t("Falha ao copiar.", "Copy failed."), true); }
       };
     }
   }
@@ -1005,14 +1214,11 @@ function wire(route, params) {
       test.disabled = true;
       let res;
       if ((state.settings.channel || "stevo") === "stevo") {
-        // mirror the live format: a Stevo button message with the opt-in button
-        res = await api.stevoSend({
-          kind: "button",
-          number: state.settings.testContact,
-          text: renderMessage(msg.body),
-          footer: state.settings.stevoFooter || "",
-          buttons: [{ id: "keep_receiving", text: t("Quero continuar recebendo", "Keep me subscribed") }]
-        });
+        // mirror the live format: build payload from the message's authored kind
+        const payload = buildStevoPayload(msg, SAMPLE_CONTACT, false);
+        payload.number = state.settings.testContact;
+        if (state.settings.locationId) payload.locationId = state.settings.locationId;
+        res = await api.stevoSend(payload);
       } else {
         res = await api.dispatchTest({ contactId: state.settings.testContact, channel: msg.channel, message: renderMessage(msg.body) });
       }

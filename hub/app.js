@@ -180,7 +180,11 @@ const seedSettings = () => ({
   macros: [
     { name: "opt_in_3", value: "Sim*sim_keep/Não*sim_stop/Talvez*sim_later" },
     { name: "engage_simples", value: "Continuar*continuar_engage/Pausar*pausar_engage/Sair*sair_engage" }
-  ]
+  ],
+  // Tags to count on the Analytics tile — each tag = a segment applied by the
+  // webhook when a button is tapped. GoHighLevel itself is the store; the hub
+  // just asks "how many contacts have this tag?".
+  analyticsTags: ["plano-a", "plano-b", "lead-frio", "weekly-active"]
 });
 
 /* ---------------- persistent state ---------------- */
@@ -206,6 +210,8 @@ const state = {
   tags: TAGS,                        // replaced by real location tags on load
   customFields: CUSTOM_FIELDS,       // replaced by real custom fields on load
   live: false,
+  tagCounts: {},                      // per-tag contact counts for analytics tile
+  tagCountsMock: false,
   ui: { dayOpen: null },
   dispatch: { messageId: null, filters: null }
 };
@@ -237,6 +243,19 @@ async function loadLive() {
   } catch {}
 }
 
+// Pulls per-tag contact counts from GHL — each tag is a "click segment" applied
+// by the webhook routing. Cached on state.tagCounts and rendered in the
+// dashboard analytics tile.
+async function loadTagCounts() {
+  const tags = state.settings.analyticsTags || [];
+  if (!tags.length) { state.tagCounts = {}; return; }
+  try {
+    const r = await jpost("/api/ghl/tag-counts", { tags, locationId: state.settings.locationId || "" });
+    state.tagCounts = (r && r.counts) || {};
+    state.tagCountsMock = !!(r && r.mock);
+  } catch { state.tagCounts = {}; }
+}
+
 /* ---------------- engagement / non-responder flagging ---------------- */
 const engCfg = () => state.settings.engagement || { flagAfter: 3, flagTag: "sem-resposta" };
 // a contact is a non-responder if explicitly tagged, or received N+ messages with no reply
@@ -257,9 +276,29 @@ function recordSend(eligible) {
 
 /* ---------------- drip mode (always on) ---------------- */
 const dripCfg = () => state.settings.drip || { batch: 2, everySec: 60 };
+// A/B variants — all non-archived messages for the same day form a variant pool.
+// dripSend distributes contacts across the pool deterministically (hash of
+// contact.id), so the same contact always lands on the same variant.
+function variantsForDay(day) {
+  return state.messages.filter((m) => m.day === day && m.status !== "archived");
+}
+function hashStr(s) {
+  let h = 0; const str = String(s || "");
+  for (let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; }
+  return Math.abs(h);
+}
+function pickVariant(pool, contactId) {
+  if (!pool.length) return null;
+  if (pool.length === 1) return pool[0];
+  return pool[hashStr(contactId) % pool.length];
+}
+
 async function dripSend({ msg, wfId, eligible, f, logDispatch, button }) {
   const drip = dripCfg();
   const channel = state.settings.channel || "stevo";
+  // gather variants for the day (A/B); fall back to the explicitly-picked msg
+  const pool = variantsForDay(msg.day);
+  const useVariants = pool.length > 1;
   if (button) button.disabled = true;
   if (!eligible.length) {
     logDispatch("sent", { sent: 0, failed: 0 }, f, eligible);
@@ -271,7 +310,9 @@ async function dripSend({ msg, wfId, eligible, f, logDispatch, button }) {
   for (let i = 0; i < eligible.length; i += drip.batch) chunks.push(eligible.slice(i, i + drip.batch));
   let sent = 0, failed = 0, pending = 0;
   const flagAfter = engCfg().flagAfter;
-  toast(`Drip started: ${eligible.length} contacts · ${drip.batch}/batch every ${drip.everySec}s.`);
+  toast(useVariants
+    ? `Drip A/B: ${eligible.length} contacts across ${pool.length} variants · ${drip.batch}/batch every ${drip.everySec}s.`
+    : `Drip started: ${eligible.length} contacts · ${drip.batch}/batch every ${drip.everySec}s.`);
   const summary = document.getElementById("aud-summary");
   for (let b = 0; b < chunks.length; b++) {
     if (channel === "stevo") {
@@ -281,7 +322,8 @@ async function dripSend({ msg, wfId, eligible, f, logDispatch, button }) {
       // message — so they all ship as kind:text. Image kind goes via /send/image.
       for (const c of chunks[b]) {
         const isLastChance = (c.noReplyCount || 0) === flagAfter - 1;
-        const payload = buildStevoPayload(msg, c, isLastChance);
+        const variant = useVariants ? pickVariant(pool, c.id) : msg;
+        const payload = buildStevoPayload(variant, c, isLastChance);
         payload.number = c.phone;
         if (state.settings.locationId) payload.locationId = state.settings.locationId;
         const r = await api.stevoSend(payload);
@@ -455,6 +497,39 @@ screens.dashboard = () => {
       </div>` : dashInfo(today)}`;
 };
 
+// Renders the per-tag click analytics tile. Counts come from GoHighLevel
+// (each webhook button-click applies a tag — GHL is the store).
+function analyticsTileHTML() {
+  const tags = state.settings.analyticsTags || [];
+  if (!tags.length) {
+    return `<div class="card analytics-tile">
+      <div class="panel-title">${t("Cliques por opção", "Clicks by option")}</div>
+      <p class="muted" style="font-size:.84rem">${t("Adicione tags em Configurações pra rastrear cliques aqui.", "Add tags in Settings to track clicks here.")}</p>
+      <a class="btn btn--soft btn--sm mt" href="#/settings">${t("Configurar tags", "Configure tags")}</a>
+    </div>`;
+  }
+  const counts = state.tagCounts || {};
+  const max = Math.max(1, ...tags.map((tag) => counts[tag] || 0));
+  const rows = tags.map((tag) => {
+    const n = counts[tag];
+    const val = n == null ? "—" : String(n);
+    const pct = n == null ? 0 : Math.round(((n || 0) / max) * 100);
+    return `<div class="ana-row">
+      <span class="ana-row__tag" title="${esc(tag)}">${esc(tag)}</span>
+      <span class="ana-row__bar"><span style="width:${pct}%"></span></span>
+      <span class="ana-row__val">${esc(val)}</span>
+    </div>`;
+  }).join("");
+  return `<div class="card analytics-tile">
+    <div class="row between">
+      <div class="panel-title" style="margin:0">${t("Cliques por opção", "Clicks by option")}</div>
+      ${state.tagCountsMock ? `<span class="pill pill--muted" title="${esc(t("Sem GHL conectado — números de demonstração", "GHL not connected — demo numbers"))}">mock</span>` : ""}
+    </div>
+    <p class="muted" style="font-size:.78rem;margin:4px 0 10px">${t("Contagem de contatos por tag aplicada via webhook.", "Contact counts per tag applied by the webhook.")}</p>
+    <div class="ana">${rows}</div>
+  </div>`;
+}
+
 // informative lower section of the home (shown when no day panel is open)
 function dashInfo(today) {
   const ds = state.dayState[today.day];
@@ -471,6 +546,7 @@ function dashInfo(today) {
         <div class="panel-title">${t("Hoje", "Today")}</div>
         ${todayBlock}
       </div>
+      ${analyticsTileHTML()}
       <div class="card">
         <div class="panel-title">${t("Atividade recente", "Recent activity")}</div>
         ${recent.length ? recent.map((l) => `<div class="row between" style="padding:7px 0;border-bottom:1px solid var(--line-2);font-size:.84rem">
@@ -544,6 +620,8 @@ screens.library = (params) => {
   const groups = days.map((dn) => {
     const def = DAY_DEFS.find((d) => d.day === dn);
     const msgs = state.messages.filter((m) => m.day === dn);
+    const variants = msgs.filter((mm) => mm.status !== "archived");
+    const isAB = variants.length > 1;
     const rows = msgs.length ? msgs.map((m) => `
       <div class="list-item">
         <div style="min-width:0">
@@ -551,6 +629,7 @@ screens.library = (params) => {
             <strong>${esc(m.title)}</strong>
             <span class="pill pill--muted">${esc(KIND_INFO(m.kind || "text").icon + " " + KIND_INFO(m.kind || "text").label)}</span>
             <span class="pill ${statusClass(m.status)}">${m.status}</span>
+            ${isAB && m.status !== "archived" ? `<span class="variant-pill" title="${esc(t("A/B — distribuído automaticamente", "A/B — auto-distributed"))}">A/B · ${variants.indexOf(m) + 1}/${variants.length}</span>` : ""}
           </div>
           <div class="muted" style="font-size:.8rem">${m.channel} · v${m.version} · edited ${fmtDate(m.edited)}</div>
         </div>
@@ -740,11 +819,16 @@ function buildStevoPayload(m, contact, lastChance) {
   return { kind: "text", text: cmd + nudge };
 }
 
-function previewHTML(m) {
+function currentPreviewContact() {
+  const id = state.ui && state.ui.previewContactId;
+  return id ? state.contacts.find((c) => c.id === id) || null : null;
+}
+function previewHTML(m, contact) {
   normalizeMsg(m);
-  const txt = esc(renderMessage(m.body || "")).replace(/\n/g, "<br>");
-  const head = m.header ? `<div class="wa-head">${esc(m.header)}</div>` : "";
-  const foot = m.footer ? `<div class="wa-foot">${esc(m.footer)}</div>` : "";
+  const c = contact || currentPreviewContact() || SAMPLE_CONTACT;
+  const txt = esc(renderMessage(m.body || "", c)).replace(/\n/g, "<br>");
+  const head = m.header ? `<div class="wa-head">${esc(renderMessage(m.header, c))}</div>` : "";
+  const foot = m.footer ? `<div class="wa-foot">${esc(renderMessage(m.footer, c))}</div>` : "";
   const img  = (m.image && (m.kind === "image" || m.kind === "text")) ? `<div class="wa-img"><img src="${esc(m.image)}" alt=""></div>` : "";
   let extras = "";
   if (m.kind === "button") {
@@ -924,14 +1008,23 @@ function messageEditor(id) {
       <div class="card card--glass">
         <div class="panel-title">${t("Comando Gerado", "Generated Command")}</div>
         <div class="cmd-box">
-          <pre id="ed-command" class="cmd-pre">${esc(buildStevoCommand(m))}</pre>
+          <pre id="ed-command" class="cmd-pre">${esc(buildStevoCommand(m, currentPreviewContact()))}</pre>
           <button class="btn btn--soft btn--sm cmd-copy" id="ed-copy">📋 ${t("Copiar Comando", "Copy Command")}</button>
         </div>
         <p class="muted" style="font-size:.78rem;margin-top:8px">${t("Este é o texto exato enviado ao Stevo — o bot dele converte em mensagem interativa no WhatsApp.", "This is the exact text sent to Stevo — the bot turns it into the interactive WhatsApp message.")}</p>
 
-        <div class="panel-title mt">${t("Como aparece no WhatsApp", "How it looks on WhatsApp")}</div>
-        <div class="wa-preview" id="ed-preview">${previewHTML(m)}</div>
-        <p class="muted" style="font-size:.78rem;margin-top:6px">${t("Preview com contato de exemplo. Variáveis são resolvidas no envio.", "Preview uses a sample contact. Variables resolve at send time.")}</p>
+        <div class="row between mt" style="gap:10px;align-items:center">
+          <div class="panel-title" style="margin:0">${t("Como aparece no WhatsApp", "How it looks on WhatsApp")}</div>
+          <div class="row" style="gap:6px;align-items:center">
+            <span class="muted" style="font-size:.74rem">${t("Preview com", "Preview as")}:</span>
+            <select class="select" id="ed-preview-contact" style="font-size:.78rem;max-width:220px">
+              <option value="">${esc(t("Contato de exemplo", "Sample contact"))}</option>
+              ${state.contacts.slice(0, 50).map((c) => `<option value="${esc(c.id)}" ${state.ui.previewContactId === c.id ? "selected" : ""}>${esc(c.first_name || c.full_name || c.email || c.id)}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <div class="wa-preview" id="ed-preview">${previewHTML(m, currentPreviewContact())}</div>
+        <p class="muted" style="font-size:.78rem;margin-top:6px">${t("Variáveis são resolvidas por contato no envio.", "Variables resolve per contact at send time.")} ${state.ui.previewContactId ? `<span style="color:var(--accent)">${t("Usando contato real do GHL.", "Using a real GHL contact.")}</span>` : ""}</p>
       </div>
     </div>`;
 }
@@ -981,6 +1074,68 @@ screens.audience = () => {
 
 /* ---- Reusable dispatch block: Message (+ quick edit) · Audience · Send ----
    Used both on the Send tab and inline on the Dashboard day panel. */
+/* ---------------- Preflight checks (before "Enviar agora") ---------------- */
+// Returns a list of {ok, label, info, hint} — never blocks, just surfaces the
+// most common errors that bite a non-technical operator (wrong test contact,
+// offline day, no eligible audience, etc.).
+function preflightChecks(msg, eligibleCount) {
+  const s = state.settings;
+  const channel = s.channel || "stevo";
+  const list = [];
+  list.push({
+    ok: !!msg,
+    label: t("Mensagem selecionada", "Message selected"),
+    info: msg ? `${msg.title} (${KIND_INFO(msg.kind || "text").label})` : t("escolha uma mensagem", "pick a message")
+  });
+  list.push({
+    ok: !!msg && !isOffline(msg.day),
+    label: t("Dia não está offline", "Day is not offline"),
+    info: msg ? (isOffline(msg.day) ? t("dia offline — habilite no painel", "offline — enable on dashboard") : msg.day) : "—"
+  });
+  list.push({
+    ok: eligibleCount > 0,
+    label: t("Pelo menos 1 contato elegível", "At least 1 eligible contact"),
+    info: `${eligibleCount} ${t("após exclusões de segurança", "after safety exclusions")}`
+  });
+  list.push({
+    ok: !!s.testContact,
+    label: t("Contato de teste preenchido", "Test contact set"),
+    info: s.testContact || t("preencha em Configurações", "set in Settings")
+  });
+  if (channel === "ghl" && msg) {
+    list.push({
+      ok: !!s.workflows[msg.day],
+      label: t("Workflow GHL mapeado para o dia", "GHL workflow mapped for the day"),
+      info: s.workflows[msg.day] || t("não definido", "not set")
+    });
+  }
+  if (channel === "stevo") {
+    list.push({
+      ok: true, // structurally ready; backend gates STEVO_READY
+      label: t("Canal Stevo configurado", "Stevo channel configured"),
+      info: "/send/text + " + (s.locationId ? `loc:${s.locationId.slice(0, 8)}…` : t("legado", "legacy"))
+    });
+  }
+  return list;
+}
+function preflightHTML(msg, eligibleCount) {
+  const checks = preflightChecks(msg, eligibleCount);
+  const total = checks.length, okCount = checks.filter((c) => c.ok).length;
+  const allOk = okCount === total;
+  return `<details class="preflight__box ${allOk ? "is-all-ok" : "is-not-ready"}" ${allOk ? "" : "open"}>
+    <summary class="preflight__head">
+      <span class="preflight__pill">${allOk ? "✓" : okCount + "/" + total}</span>
+      <strong>${allOk ? t("Pré-flight ok — pronto pra enviar", "Pre-flight ok — ready to send") : t("Pré-flight com alertas", "Pre-flight has warnings")}</strong>
+    </summary>
+    <ul class="preflight__list">${checks.map((c) => `
+      <li class="${c.ok ? "ok" : "warn"}">
+        <span class="preflight__dot">${c.ok ? "✓" : "!"}</span>
+        <span class="preflight__lbl">${esc(c.label)}</span>
+        <span class="preflight__info">${esc(c.info)}</span>
+      </li>`).join("")}</ul>
+  </details>`;
+}
+
 function dispatchPanels() {
   const msg = state.messages.find((m) => m.id === state.dispatch.messageId);
   const f = currentFilters();
@@ -1031,6 +1186,8 @@ function dispatchPanels() {
         <div class="panel-title">3 · ${t("Enviar", "Send")}</div>
         <div class="audience-count" id="aud-count">${count}</div>
         <p class="muted" id="aud-summary" style="font-size:.84rem">${t("elegíveis após exclusões de segurança", "eligible after safety exclusions")}</p>
+        ${msg && variantsForDay(msg.day).length > 1 ? `
+          <div class="drip-note" style="background:color-mix(in srgb, var(--accent) 10%, var(--bg))">🧪 ${t("A/B detectado", "A/B detected")}: ${variantsForDay(msg.day).length} ${t("variantes para", "variants for")} <strong>${esc(msg.day)}</strong> — ${t("disparo distribui contatos automaticamente.", "dispatch distributes contacts automatically.")}</div>` : ""}
         <div class="drip-note">🩸 ${t("Modo drip (sempre ativo)", "Drip mode (always on)")} · via ${state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow"}</div>
         ${state.settings.channel === "stevo" ? `<div class="drip-note" style="margin-top:6px">💬 ${t("Formato com botão (/send/button) — cada mensagem leva o botão", "Button format (/send/button) — every message carries the")} “${t("Quero continuar recebendo", "Keep me subscribed")}”.</div>` : ""}
         <div class="drip-edit row" style="gap:10px;margin-top:8px">
@@ -1038,6 +1195,7 @@ function dispatchPanels() {
           <div class="field" style="flex:1"><label>${t("Segundos entre lotes", "Seconds between batches")}</label><input class="input" type="number" min="1" id="d-drip-every" value="${dripCfg().everySec}"></div>
         </div>
         <div id="d-warn"></div>
+        <div class="preflight" id="d-preflight">${preflightHTML(msg, count)}</div>
         <div class="row mt" style="gap:10px">
           <button class="btn btn--soft" id="d-test" ${!msg ? "disabled" : ""}>${t("Testar", "Send test")}</button>
           <button class="btn btn--ghost" id="d-schedule" ${!msg ? "disabled" : ""}>${t("Agendar", "Schedule")}</button>
@@ -1151,6 +1309,15 @@ screens.settings = () => {
         <button class="btn btn--soft btn--sm mt" id="set-macro-add">+ ${t("Adicionar macro", "Add macro")}</button>
       </div>
       <div class="card">
+        <div class="panel-title">${t("Tags para Analytics", "Analytics tags")}</div>
+        <p class="muted mb" style="font-size:.82rem">${t("Tags rastreadas no tile do Painel. Cada uma é segmento aplicado pelo webhook quando alguém toca um botão. Uma por linha.", "Tags tracked on the Dashboard tile. Each is a segment applied by the webhook on button taps. One per line.")}</p>
+        <textarea class="textarea" id="set-analytics-tags" rows="4" placeholder="plano-a&#10;plano-b&#10;lead-frio">${esc((s.analyticsTags || []).join("\n"))}</textarea>
+        <div class="row mt" style="gap:8px">
+          <button class="btn btn--soft btn--sm" id="set-analytics-save">${t("Salvar tags", "Save tags")}</button>
+          <button class="btn btn--ghost btn--sm" id="set-analytics-refresh">↻ ${t("Atualizar contagens", "Refresh counts")}</button>
+        </div>
+      </div>
+      <div class="card">
         <div class="panel-title">${t("Encadeamento (chain) — exportar p/ TENANTS", "Chain — export for TENANTS")}</div>
         <p class="muted mb" style="font-size:.82rem">${t("IDs no formato chain:msg-id fazem o webhook disparar outra mensagem automaticamente. Esses comandos precisam estar no env TENANTS[location].chainMessages para o webhook conseguir achá-los. Copie o JSON abaixo e cole na config do tenant.", "IDs in chain:msg-id format make the webhook fire another message automatically. Those commands must live in the TENANTS[location].chainMessages env so the webhook can resolve them. Copy the JSON below and paste into the tenant config.")}</p>
         <pre id="set-chain-export" class="cmd-pre" style="max-height:200px">${esc(JSON.stringify(state.messages.reduce((acc, m) => { acc[m.id] = buildStevoCommand(m); return acc; }, {}), null, 2))}</pre>
@@ -1244,9 +1411,13 @@ function wire(route, params) {
       if (!m) return;
       normalizeMsg(m);
       const refresh = () => {
-        const p = $("#ed-preview"); if (p) p.innerHTML = previewHTML(m);
-        const c = $("#ed-command"); if (c) c.textContent = buildStevoCommand(m);
+        const cn = currentPreviewContact();
+        const p = $("#ed-preview"); if (p) p.innerHTML = previewHTML(m, cn);
+        const c = $("#ed-command"); if (c) c.textContent = buildStevoCommand(m, cn);
       };
+      // preview contact selector → substitutes variables against a real GHL contact
+      const pc = $("#ed-preview-contact");
+      pc && pc.addEventListener("change", () => { state.ui.previewContactId = pc.value || null; refresh(); });
       const bindInput = (sel, key) => { const el = $(sel); el && el.addEventListener("input", () => { m[key] = el.value; persist(); refresh(); }); };
       bindInput("#ed-title", "title"); bindInput("#ed-body", "body");
       bindInput("#ed-header", "header"); bindInput("#ed-footer", "footer"); bindInput("#ed-image", "image");
@@ -1418,6 +1589,7 @@ function wire(route, params) {
         (n > 250) ? `High volume (${n}). Double-check before sending.` :
         (!f.tag && !f.field && !f.pipeline && !f.source) ? "No filter — this targets the whole eligible base." : "";
       $("#d-warn").innerHTML = warn ? `<div class="modal__warn mt">${esc(warn)}</div>` : "";
+      const pf = $("#d-preflight"); if (pf) pf.innerHTML = preflightHTML(msg, n);
     };
     ["tag", "withoutTag", "field", "fieldValue", "pipeline", "source"].forEach((i) => { const el = $("#f-" + i); el && el.addEventListener("input", recount); });
     $("#f-optout") && $("#f-optout").addEventListener("change", recount);
@@ -1551,6 +1723,21 @@ function wire(route, params) {
     });
     const macroAdd = $("#set-macro-add");
     macroAdd && (macroAdd.onclick = () => { state.settings.macros.push({ name: "", value: "" }); persist(); render(); });
+    // Analytics tags — save list and trigger refresh of the dashboard tile counts
+    const anaSave = $("#set-analytics-save");
+    anaSave && (anaSave.onclick = async () => {
+      const ta = $("#set-analytics-tags");
+      state.settings.analyticsTags = (ta.value || "").split("\n").map((s) => s.trim()).filter(Boolean);
+      persist(); toast(t("Tags de analytics salvas.", "Analytics tags saved."));
+      await loadTagCounts(); render();
+    });
+    const anaRefresh = $("#set-analytics-refresh");
+    anaRefresh && (anaRefresh.onclick = async () => {
+      anaRefresh.disabled = true; const o = anaRefresh.textContent; anaRefresh.textContent = t("Atualizando…", "Updating…");
+      await loadTagCounts();
+      anaRefresh.disabled = false; anaRefresh.textContent = o;
+      toast(t("Contagens atualizadas.", "Counts refreshed.")); render();
+    });
     // Copy chainMessages JSON for TENANTS
     const chainCopy = $("#set-chain-copy");
     chainCopy && (chainCopy.onclick = async () => {
@@ -1605,5 +1792,6 @@ function init() {
   window.addEventListener("hashchange", render);
   render();                                  // instant paint (seed data)
   loadLive().then(render);                   // refresh with real GoHighLevel data
+  loadTagCounts().then(render);              // populate analytics tile
 }
 init();

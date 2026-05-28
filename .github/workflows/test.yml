@@ -1,0 +1,74 @@
+name: tests
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax check all hub JS
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r f; do
+            node --check "$f" || fail=1
+          done < <(find hub -name '*.js' -not -path '*/node_modules/*' -not -path '*/test/*')
+          exit $fail
+
+  unit:
+    runs-on: ubuntu-latest
+    needs: syntax
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Webhook unit tests
+        run: node hub/test/webhook.test.js
+      - name: Cron + tag-counts unit tests
+        run: node hub/test/cron.test.js
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: syntax
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright + Chromium
+        run: |
+          npm init -y >/dev/null
+          npm i --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Serve static hub
+        run: python3 -m http.server 8099 --directory hub &
+      - name: Wait for server
+        run: |
+          for i in 1 2 3 4 5; do
+            curl -sf http://localhost:8099/index.html >/dev/null && exit 0
+            sleep 1
+          done
+          echo "static server failed to start" && exit 1
+      - name: Run E2E
+        run: node hub/test/builder.e2e.js
+
+  smoke:
+    runs-on: ubuntu-latest
+    needs: [unit, e2e]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Smoke test deployed URL
+        run: |
+          set -e
+          curl -fsS https://hub-drab-ten.vercel.app/ | grep -q 'Vida Bela'
+          curl -fsS https://hub-drab-ten.vercel.app/styles.css | head -c 100 >/dev/null
+          echo "deploy OK"

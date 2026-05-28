@@ -17,6 +17,10 @@
 //       },
 //       "chainMessages": {                          // msg-id -> Stevo command string
 //         "msg-abc123": "#bt|Próximo passo|Qual sua escolha?|.|Mensal*plano_mensal_a/Anual*plano_anual_a"
+//       },
+//       "schedule": {                               // OPTIONAL — drives /api/cron/dispatch
+//         "Monday":    { "hourUtc": 11, "audienceTag": "weekly-active", "command": "#bt|..." },
+//         "Wednesday": { "hourUtc": 11, "audienceTag": "weekly-active", "messageRef": "msg-abc123" }
 //       }
 //     }
 //   }
@@ -63,7 +67,8 @@ function tenant(locationId) {
     stevoApiKey: t.stevoApiKey || "",
     stevoReady: Boolean(t.stevoReady),
     routes: t.routes || {},
-    chainMessages: t.chainMessages || {}
+    chainMessages: t.chainMessages || {},
+    schedule: t.schedule || {}
   };
 }
 

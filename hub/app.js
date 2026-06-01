@@ -534,7 +534,6 @@ function analyticsTileHTML() {
 function dashInfo(today) {
   const ds = state.dayState[today.day];
   const recent = state.logs.slice(0, 5);
-  const chLabel = state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow";
   const todayBlock = isOffline(today)
     ? `<p class="muted">${t("Hoje é dia de descanso (offline) — sem envio.", "Today is an offline rest day — no message.")}</p>`
     : `<div class="row between" style="margin-bottom:10px"><strong>${dayShort(today.day)} · ${esc(dayTheme(today))}</strong><span class="pill ${statusClass(ds.status)}">${ds.status === "scheduled" ? t("Vai enviar", "Will send") : ds.status}</span></div>
@@ -553,21 +552,6 @@ function dashInfo(today) {
           <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.title)}</span>
           <span class="pill ${statusClass(l.status)}" style="flex:none">${l.status}</span></div>`).join("") : `<p class="muted">${t("Sem atividade ainda.", "No activity yet.")}</p>`}
         <a class="btn btn--soft btn--sm mt" href="#/logs">${t("Ver histórico", "View logs")}</a>
-      </div>
-      <div class="card">
-        <div class="panel-title">${t("Automação", "Automation")}</div>
-        <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">${t("Canal", "Channel")}</span><strong>${chLabel}</strong></div>
-        <div style="padding:6px 0;font-size:.86rem"><span class="muted">Drip</span>
-          <div class="row" style="gap:8px;margin-top:6px">
-            <input class="input" type="number" min="1" id="auto-drip-batch" value="${dripCfg().batch}" style="width:64px" title="${t("Mensagens por lote", "Messages per batch")}">
-            <span class="muted" style="align-self:center">${t("por lote a cada", "per batch every")}</span>
-            <input class="input" type="number" min="1" id="auto-drip-every" value="${dripCfg().everySec}" style="width:72px" title="${t("Segundos entre lotes", "Seconds between batches")}">
-            <span class="muted" style="align-self:center">s</span>
-          </div>
-        </div>
-        <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">${t("Parar após sem resposta", "Stop after no-reply")}</span><strong>${engCfg().flagAfter}</strong></div>
-        <div class="row between" style="padding:6px 0;font-size:.86rem"><span class="muted">${t("Sem resposta (flag)", "Flagged no-reply")}</span><strong>${nonResponders().length}</strong></div>
-        <a class="btn btn--soft btn--sm mt" href="#/settings">${t("Ajustar automação", "Adjust automation")}</a>
       </div>
     </div>`;
 }
@@ -1276,13 +1260,23 @@ screens.settings = () => {
         </select></div>
       </div>
       <div class="card">
-        <div class="panel-title">Drip mode <span class="pill pill--accent">always on</span></div>
-        <p class="muted mb" style="font-size:.82rem">Dispatches always go out gradually, never all at once — protects deliverability and avoids spam flags.</p>
+        <div class="row between"><div class="panel-title" style="margin:0">${t("Automação de envio", "Send automation")} <span class="pill pill--accent">${t("sempre ativa", "always on")}</span></div>
+          <span class="pill pill--muted">${esc(t("Canal", "Channel"))}: ${state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow"}</span></div>
+        <p class="muted mb" style="font-size:.82rem">${t("Disparos saem em ritmo controlado (drip), nunca todos de uma vez — protege a entrega e evita flag de spam.", "Dispatches always go out gradually, never all at once — protects deliverability and avoids spam flags.")}</p>
         <div class="row" style="gap:12px">
           <div class="field" style="flex:1"><label>${t("Mensagens por lote", "Messages per batch")}</label><input class="input" type="number" min="1" id="set-drip-batch" value="${(s.drip || { batch: 2 }).batch}"></div>
           <div class="field" style="flex:1"><label>${t("Segundos entre lotes", "Seconds between batches")}</label><input class="input" type="number" min="1" id="set-drip-every" value="${(s.drip || { everySec: 60 }).everySec}"></div>
         </div>
-        <div class="field" style="margin-bottom:0"><label>Flag non-responders after N sends (auto-excludes them)</label><input class="input" type="number" min="1" id="set-flagafter" value="${(s.engagement || { flagAfter: 3 }).flagAfter}"></div>
+        <div class="row" style="gap:12px">
+          <div class="field" style="flex:1"><label>${t("Parar após N sem resposta", "Stop after N no-replies")}</label><input class="input" type="number" min="1" id="set-flagafter" value="${(s.engagement || { flagAfter: 3 }).flagAfter}"></div>
+          <div class="field" style="flex:1">
+            <label>${t("Sem resposta (flag) agora", "No-reply (flagged) now")}</label>
+            <a class="input row" href="#/logs" style="text-decoration:none;align-items:center;justify-content:space-between;background:var(--bg)">
+              <strong>${nonResponders().length}</strong>
+              <span class="muted" style="font-size:.74rem">${t("ver no histórico", "see in logs")} →</span>
+            </a>
+          </div>
+        </div>
       </div>
       <div class="card">
         <div class="panel-title">Excluded tags (safety)</div>
@@ -1374,15 +1368,6 @@ function wire(route, params) {
   });
   const closeDay = root.querySelector("[data-close-day]");
   closeDay && (closeDay.onclick = () => { state.ui.dayOpen = null; render(); });
-
-  // dashboard automation card: edit drip pacing inline
-  const saveAutoDrip = () => {
-    const b = parseInt($("#auto-drip-batch").value, 10), e = parseInt($("#auto-drip-every").value, 10);
-    state.settings.drip = { batch: b > 0 ? b : 2, everySec: e > 0 ? e : 60 };
-    persist(); toast(t("Drip atualizado.", "Drip updated."));
-  };
-  $("#auto-drip-batch") && $("#auto-drip-batch").addEventListener("change", saveAutoDrip);
-  $("#auto-drip-every") && $("#auto-drip-every").addEventListener("change", saveAutoDrip);
 
   if (route === "library") {
     root.querySelectorAll("[data-act='new']").forEach((b) => b.onclick = () => {

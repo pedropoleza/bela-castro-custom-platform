@@ -343,7 +343,7 @@ async function dripSend({ msg, wfId, eligible, f, logDispatch, button }) {
   persist();
   const status = pending && !sent ? "scheduled" : (failed > 0 ? "partially sent" : "sent");
   logDispatch(status, { sent, failed }, f, eligible);
-  toast(pending ? `Drip queued (Stevo pending number): ${pending} ready, ${sent} sent.` : `Drip complete: ${sent} sent, ${failed} failed.`);
+  toast(pending ? t(`Drip enfileirado (aguardando número conectado): ${pending} pronto(s), ${sent} enviado(s).`, `Drip queued (awaiting connected number): ${pending} ready, ${sent} sent.`) : t(`Drip concluído: ${sent} enviado(s), ${failed} com falha.`, `Drip complete: ${sent} sent, ${failed} failed.`));
   if (button) button.disabled = false;
   location.hash = "#/logs";
 }
@@ -523,9 +523,9 @@ function analyticsTileHTML() {
   return `<div class="card analytics-tile">
     <div class="row between">
       <div class="panel-title" style="margin:0">${t("Cliques por opção", "Clicks by option")}</div>
-      ${state.tagCountsMock ? `<span class="pill pill--muted" title="${esc(t("Sem GHL conectado — números de demonstração", "GHL not connected — demo numbers"))}">mock</span>` : ""}
+      ${state.tagCountsMock ? `<span class="pill pill--muted" title="${esc(t("CRM não conectado — números de demonstração", "CRM not connected — demo numbers"))}">demo</span>` : ""}
     </div>
-    <p class="muted" style="font-size:.78rem;margin:4px 0 10px">${t("Contagem de contatos por tag aplicada via webhook.", "Contact counts per tag applied by the webhook.")}</p>
+    <p class="muted" style="font-size:.78rem;margin:4px 0 10px">${t("Contagem de contatos por tag, atualizada automaticamente ao toque no botão.", "Contact counts per tag, auto-updated when contacts tap a button.")}</p>
     <div class="ana">${rows}</div>
   </div>`;
 }
@@ -662,8 +662,8 @@ const KIND_INFO = (k) => ({
     short: t("Até 3 opções rápidas", "Up to 3 quick replies"),
     icon: "🔘",
     desc: t(
-      "Mostra até 3 botões de resposta rápida. O cliente toca em uma opção e o ID volta no webhook → você usa pra aplicar uma tag e disparar o workflow nativo do GoHighLevel daquela resposta.",
-      "Shows up to 3 quick-reply buttons. The contact taps one option, the ID returns on the webhook → use it to apply a tag and trigger the native GoHighLevel workflow for that response."
+      "Mostra até 3 botões de resposta rápida. O cliente toca em uma opção e o ID identifica a escolha — você usa pra aplicar uma tag e disparar o workflow correspondente no CRM.",
+      "Shows up to 3 quick-reply buttons. The contact taps one option, the ID identifies the choice — use it to apply a tag and trigger the matching workflow in the CRM."
     ),
     cmd: "#bt|Título|Descrição|Rodapé|Opção1*ID1/Opção2*ID2/Opção3*ID3"
   },
@@ -672,8 +672,8 @@ const KIND_INFO = (k) => ({
     short: t("Até 10 itens em menu", "Up to 10 items in a menu"),
     icon: "📋",
     desc: t(
-      "Menu deslizante com até 10 itens. Bom pra catálogo / opções longas. Cada item tem Título, Descrição (opcional) e ID — o ID retorna pelo webhook quando o cliente escolhe.",
-      "A scrollable menu of up to 10 items. Good for catalogs or longer choice lists. Each item has Title, Description (optional) and ID — the ID comes back on the webhook on selection."
+      "Menu deslizante com até 10 itens. Bom pra catálogo / opções longas. Cada item tem Título, Descrição (opcional) e ID — o ID identifica a escolha do cliente para aplicar tag e disparar o fluxo correspondente.",
+      "A scrollable menu of up to 10 items. Good for catalogs or longer choice lists. Each item has Title, Description (optional) and ID — the ID identifies the contact's pick to apply a tag and trigger the matching flow."
     ),
     cmd: "#List|Título|Descrição|Texto do botão|Opção*Descrição*ID/Opção2*Descrição2*ID2"
   },
@@ -902,7 +902,7 @@ function carouselEditor(m) {
   return `<div class="builder">
     <div class="row between" style="margin-bottom:8px">
       <div class="builder__title" style="margin:0">${t("Cards", "Cards")} <span class="muted">${m.cards.length}/10</span></div>
-      <button class="btn btn--soft btn--sm" id="c-hydrate" title="${esc(t("Buscar produtos da location no GoHighLevel e preencher cards", "Pull products from this GHL location and fill cards"))}">🛒 ${t("Hidratar do GHL", "Hydrate from GHL")}</button>
+      <button class="btn btn--soft btn--sm" id="c-hydrate" title="${esc(t("Buscar produtos do CRM e preencher os cards automaticamente", "Pull products from the CRM and fill the cards"))}">🛒 ${t("Hidratar do CRM", "Hydrate from CRM")}</button>
     </div>
     ${cards || `<p class="muted" style="font-size:.84rem">${t("Nenhum card ainda. Adicione até 10 — ou hidrate dos produtos da location.", "No cards yet. Add up to 10 — or hydrate from the location's products.")}</p>`}
     <button class="btn btn--soft btn--sm" id="c-add" ${full ? "disabled" : ""}>+ ${t("Adicionar card", "Add card")}</button>
@@ -951,7 +951,7 @@ function messageEditor(id) {
       <div class="kind-info">
         <div class="kind-info__head"><span>${info.icon}</span><strong>${esc(info.label)}</strong></div>
         <p>${esc(info.desc)}</p>
-        ${info.cmd ? `<div class="kind-info__cmd"><span class="muted">${t("Formato Stevo", "Stevo format")}:</span><code>${esc(info.cmd)}</code></div>` : ""}
+        ${info.cmd ? `<div class="kind-info__cmd"><span class="muted">${t("Formato", "Format")}:</span><code>${esc(info.cmd)}</code></div>` : ""}
       </div>
     </div>
 
@@ -995,7 +995,7 @@ function messageEditor(id) {
           <pre id="ed-command" class="cmd-pre">${esc(buildStevoCommand(m, currentPreviewContact()))}</pre>
           <button class="btn btn--soft btn--sm cmd-copy" id="ed-copy">📋 ${t("Copiar Comando", "Copy Command")}</button>
         </div>
-        <p class="muted" style="font-size:.78rem;margin-top:8px">${t("Este é o texto exato enviado ao Stevo — o bot dele converte em mensagem interativa no WhatsApp.", "This is the exact text sent to Stevo — the bot turns it into the interactive WhatsApp message.")}</p>
+        <p class="muted" style="font-size:.78rem;margin-top:8px">${t("Este é o texto enviado pelo canal — convertido automaticamente na mensagem interativa do WhatsApp.", "This is the text sent over the channel — auto-converted into the interactive WhatsApp message.")}</p>
 
         <div class="row between mt" style="gap:10px;align-items:center">
           <div class="panel-title" style="margin:0">${t("Como aparece no WhatsApp", "How it looks on WhatsApp")}</div>
@@ -1008,7 +1008,7 @@ function messageEditor(id) {
           </div>
         </div>
         <div class="wa-preview" id="ed-preview">${previewHTML(m, currentPreviewContact())}</div>
-        <p class="muted" style="font-size:.78rem;margin-top:6px">${t("Variáveis são resolvidas por contato no envio.", "Variables resolve per contact at send time.")} ${state.ui.previewContactId ? `<span style="color:var(--accent)">${t("Usando contato real do GHL.", "Using a real GHL contact.")}</span>` : ""}</p>
+        <p class="muted" style="font-size:.78rem;margin-top:6px">${t("Variáveis são resolvidas por contato no envio.", "Variables resolve per contact at send time.")} ${state.ui.previewContactId ? `<span style="color:var(--accent)">${t("Usando contato real do CRM.", "Using a real CRM contact.")}</span>` : ""}</p>
       </div>
     </div>`;
 }
@@ -1022,7 +1022,7 @@ screens.audience = () => {
   const opt = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option ${x === v ? "selected" : ""}>${esc(x)}</option>`).join("");
   const optF = (arr, v) => `<option value=""></option>` + arr.map((x) => `<option value="${esc(x.key)}" ${x.key === v ? "selected" : ""}>${esc(x.name)}</option>`).join("");
   return `
-    <h1 class="section-title">Audience Builder</h1><p class="section-sub">Segment the GoHighLevel contact base${state.live ? " (live)" : ""}. Safety exclusions are always applied. Save a segment to reuse it in the Dispatch Center.</p>
+    <h1 class="section-title">${t("Construtor de público", "Audience Builder")}</h1><p class="section-sub">${t(`Segmente a base de contatos${state.live ? " (ao vivo)" : ""}. Exclusões de segurança são sempre aplicadas. Salve um segmento para reaproveitar no envio.`, `Segment the contact base${state.live ? " (live)" : ""}. Safety exclusions are always applied. Save a segment to reuse it in the Dispatch Center.`)}</p>
     <div class="split">
       <div class="card">
         <div class="filter-row">
@@ -1089,15 +1089,22 @@ function preflightChecks(msg, eligibleCount) {
   if (channel === "ghl" && msg) {
     list.push({
       ok: !!s.workflows[msg.day],
-      label: t("Workflow GHL mapeado para o dia", "GHL workflow mapped for the day"),
+      label: t("Workflow CRM mapeado para o dia", "CRM workflow mapped for the day"),
       info: s.workflows[msg.day] || t("não definido", "not set")
     });
   }
   if (channel === "stevo") {
     list.push({
-      ok: true, // structurally ready; backend gates STEVO_READY
-      label: t("Canal Stevo configurado", "Stevo channel configured"),
-      info: "/send/text + " + (s.locationId ? `loc:${s.locationId.slice(0, 8)}…` : t("legado", "legacy"))
+      ok: true,
+      label: t("Canal WhatsApp configurado", "WhatsApp channel configured"),
+      info: s.locationId ? t("multi-tenant", "multi-tenant") : t("padrão", "default")
+    });
+  }
+  if (channel === "ghl") {
+    list.push({
+      ok: true,
+      label: t("Canal Workflow CRM configurado", "CRM workflow channel configured"),
+      info: ""
     });
   }
   return list;
@@ -1172,8 +1179,8 @@ function dispatchPanels() {
         <p class="muted" id="aud-summary" style="font-size:.84rem">${t("elegíveis após exclusões de segurança", "eligible after safety exclusions")}</p>
         ${msg && variantsForDay(msg.day).length > 1 ? `
           <div class="drip-note" style="background:color-mix(in srgb, var(--accent) 10%, var(--bg))">🧪 ${t("A/B detectado", "A/B detected")}: ${variantsForDay(msg.day).length} ${t("variantes para", "variants for")} <strong>${esc(msg.day)}</strong> — ${t("disparo distribui contatos automaticamente.", "dispatch distributes contacts automatically.")}</div>` : ""}
-        <div class="drip-note">🩸 ${t("Modo drip (sempre ativo)", "Drip mode (always on)")} · via ${state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow"}</div>
-        ${state.settings.channel === "stevo" ? `<div class="drip-note" style="margin-top:6px">💬 ${t("Formato com botão (/send/button) — cada mensagem leva o botão", "Button format (/send/button) — every message carries the")} “${t("Quero continuar recebendo", "Keep me subscribed")}”.</div>` : ""}
+        <div class="drip-note">🩸 ${t("Modo drip (sempre ativo)", "Drip mode (always on)")} · ${t("via", "via")} ${state.settings.channel === "stevo" ? t("WhatsApp", "WhatsApp") : t("Workflow CRM", "CRM workflow")}</div>
+        ${state.settings.channel === "stevo" ? `<div class="drip-note" style="margin-top:6px">💬 ${t("Cada mensagem leva o botão “Quero continuar recebendo” pra confirmar engajamento.", "Every message carries the “Keep me subscribed” button to confirm engagement.")}</div>` : ""}
         <div class="drip-edit row" style="gap:10px;margin-top:8px">
           <div class="field" style="flex:1"><label>${t("Mensagens por lote", "Messages per batch")}</label><input class="input" type="number" min="1" id="d-drip-batch" value="${dripCfg().batch}"></div>
           <div class="field" style="flex:1"><label>${t("Segundos entre lotes", "Seconds between batches")}</label><input class="input" type="number" min="1" id="d-drip-every" value="${dripCfg().everySec}"></div>
@@ -1242,26 +1249,26 @@ screens.settings = () => {
     <h1 class="section-title">${t("Configurações", "Settings")}</h1><p class="section-sub">${t("Workflows por dia, horários, canal de envio, drip, tags excluídas e contato de teste. As credenciais ficam no servidor — nunca no navegador.", "Map weekday workflows, default times, sending channel, drip, excluded tags and the test contact. API credentials live on the backend — never in this frontend.")}</p>
     <div class="split">
       <div class="card">
-        <div class="panel-title">Workflow / webhook mapping</div>
-        <p class="muted mb" style="font-size:.82rem">Each weekday triggers its GoHighLevel workflow on dispatch.</p>
+        <div class="panel-title">${t("Mapeamento de workflow por dia", "Workflow mapping per day")}</div>
+        <p class="muted mb" style="font-size:.82rem">${t("Cada dia da semana dispara seu próprio workflow no envio.", "Each weekday triggers its own workflow on dispatch.")}</p>
         ${wf}
-        <button class="btn btn--primary mt" id="set-save-wf">Save workflow map</button>
+        <button class="btn btn--primary mt" id="set-save-wf">${t("Salvar mapeamento", "Save workflow map")}</button>
       </div>
       <div class="card">
-        <div class="panel-title">Default send time</div>
+        <div class="panel-title">${t("Horário padrão de envio", "Default send time")}</div>
         ${times}
       </div>
       <div class="card">
-        <div class="panel-title">Sending channel</div>
-        <p class="muted mb" style="font-size:.82rem">Stevo (WhatsApp) supports buttons & media and the "keep receiving" opt-in. GHL triggers the weekday workflow.</p>
+        <div class="panel-title">${t("Canal de envio", "Sending channel")}</div>
+        <p class="muted mb" style="font-size:.82rem">${t("WhatsApp suporta botões, lista, carrossel, mídia e o opt-in “Quero continuar recebendo”. Workflow CRM dispara a automação mapeada para o dia.", "WhatsApp supports buttons, list, carousel, media and the keep-receiving opt-in. CRM workflow triggers the per-weekday automation.")}</p>
         <div class="field" style="margin-bottom:0"><select class="select" id="set-channel">
-          <option value="stevo" ${(s.channel || "stevo") === "stevo" ? "selected" : ""}>Stevo · WhatsApp (buttons)</option>
-          <option value="ghl" ${s.channel === "ghl" ? "selected" : ""}>GoHighLevel · workflow</option>
+          <option value="stevo" ${(s.channel || "stevo") === "stevo" ? "selected" : ""}>${t("WhatsApp (mensagens interativas)", "WhatsApp (interactive messages)")}</option>
+          <option value="ghl"   ${s.channel === "ghl" ? "selected" : ""}>${t("Workflow CRM", "CRM workflow")}</option>
         </select></div>
       </div>
       <div class="card">
         <div class="row between"><div class="panel-title" style="margin:0">${t("Automação de envio", "Send automation")} <span class="pill pill--accent">${t("sempre ativa", "always on")}</span></div>
-          <span class="pill pill--muted">${esc(t("Canal", "Channel"))}: ${state.settings.channel === "stevo" ? "Stevo WhatsApp" : "GHL workflow"}</span></div>
+          <span class="pill pill--muted">${esc(t("Canal", "Channel"))}: ${state.settings.channel === "stevo" ? t("WhatsApp", "WhatsApp") : t("Workflow CRM", "CRM workflow")}</span></div>
         <p class="muted mb" style="font-size:.82rem">${t("Disparos saem em ritmo controlado (drip), nunca todos de uma vez — protege a entrega e evita flag de spam.", "Dispatches always go out gradually, never all at once — protects deliverability and avoids spam flags.")}</p>
         <div class="row" style="gap:12px">
           <div class="field" style="flex:1"><label>${t("Mensagens por lote", "Messages per batch")}</label><input class="input" type="number" min="1" id="set-drip-batch" value="${(s.drip || { batch: 2 }).batch}"></div>
@@ -1279,15 +1286,15 @@ screens.settings = () => {
         </div>
       </div>
       <div class="card">
-        <div class="panel-title">Excluded tags (safety)</div>
+        <div class="panel-title">${t("Tags excluídas (segurança)", "Excluded tags (safety)")}</div>
         ${state.tags.map((t) => `<div class="checkline"><input type="checkbox" data-extag="${esc(t)}" ${s.excludedTags.includes(t) ? "checked" : ""}><label>${esc(t)}</label></div>`).join("")}
-        <div class="field mt"><label>Test contact (email/phone)</label><input class="input" id="set-test" value="${esc(s.testContact)}"></div>
+        <div class="field mt"><label>${t("Contato de teste (e-mail ou telefone)", "Test contact (email/phone)")}</label><input class="input" id="set-test" value="${esc(s.testContact)}"></div>
       </div>
       <div class="card">
-        <div class="panel-title">Custom field mapping</div>
-        <p class="muted mb" style="font-size:.82rem">Hub fields updated after each send.</p>
+        <div class="panel-title">${t("Mapeamento de campos personalizados", "Custom field mapping")}</div>
+        <p class="muted mb" style="font-size:.82rem">${t("Campos atualizados após cada envio.", "Fields updated after each send.")}</p>
         ${fields}
-        <button class="btn btn--soft mt" id="set-save-all">Save all settings</button>
+        <button class="btn btn--soft mt" id="set-save-all">${t("Salvar tudo", "Save all settings")}</button>
       </div>
       <div class="card">
         <div class="panel-title">${t("Macros de comando", "Command macros")}</div>
@@ -1304,18 +1311,12 @@ screens.settings = () => {
       </div>
       <div class="card">
         <div class="panel-title">${t("Tags para Analytics", "Analytics tags")}</div>
-        <p class="muted mb" style="font-size:.82rem">${t("Tags rastreadas no tile do Painel. Cada uma é segmento aplicado pelo webhook quando alguém toca um botão. Uma por linha.", "Tags tracked on the Dashboard tile. Each is a segment applied by the webhook on button taps. One per line.")}</p>
+        <p class="muted mb" style="font-size:.82rem">${t("Tags rastreadas no tile do Painel. Cada uma é segmento aplicado quando alguém toca um botão. Uma por linha.", "Tags tracked on the Dashboard tile. Each is a segment applied on button taps. One per line.")}</p>
         <textarea class="textarea" id="set-analytics-tags" rows="4" placeholder="plano-a&#10;plano-b&#10;lead-frio">${esc((s.analyticsTags || []).join("\n"))}</textarea>
         <div class="row mt" style="gap:8px">
           <button class="btn btn--soft btn--sm" id="set-analytics-save">${t("Salvar tags", "Save tags")}</button>
           <button class="btn btn--ghost btn--sm" id="set-analytics-refresh">↻ ${t("Atualizar contagens", "Refresh counts")}</button>
         </div>
-      </div>
-      <div class="card">
-        <div class="panel-title">${t("Encadeamento (chain) — exportar p/ TENANTS", "Chain — export for TENANTS")}</div>
-        <p class="muted mb" style="font-size:.82rem">${t("IDs no formato chain:msg-id fazem o webhook disparar outra mensagem automaticamente. Esses comandos precisam estar no env TENANTS[location].chainMessages para o webhook conseguir achá-los. Copie o JSON abaixo e cole na config do tenant.", "IDs in chain:msg-id format make the webhook fire another message automatically. Those commands must live in the TENANTS[location].chainMessages env so the webhook can resolve them. Copy the JSON below and paste into the tenant config.")}</p>
-        <pre id="set-chain-export" class="cmd-pre" style="max-height:200px">${esc(JSON.stringify(state.messages.reduce((acc, m) => { acc[m.id] = buildStevoCommand(m); return acc; }, {}), null, 2))}</pre>
-        <button class="btn btn--soft btn--sm mt" id="set-chain-copy">📋 ${t("Copiar chainMessages", "Copy chainMessages")}</button>
       </div>
     </div>`;
 };
@@ -1428,7 +1429,7 @@ function wire(route, params) {
         // so we mirror the textarea value into `captured` on each input.
         let captured = "";
         modal({
-          title: t("Importar comando do Stevo", "Import Stevo command"),
+          title: t("Importar comando", "Import command"),
           body: `<textarea class="textarea" id="ed-import-text" rows="6" placeholder="${esc(t("Cole aqui um comando, ex: #bt|Título|Descrição|Rodapé|Sim*sim_yes/Não*sim_no", "Paste a command, e.g.: #bt|Title|Description|Footer|Yes*yes_id/No*no_id"))}" style="width:100%"></textarea>
             <p class="muted mt" style="font-size:.78rem">${t("Os campos atuais serão substituídos pelos do comando importado.", "The current fields will be overwritten by the imported command.")}</p>`,
           confirmLabel: t("Importar", "Import"),
@@ -1636,7 +1637,7 @@ function wire(route, params) {
       }
       test.disabled = false;
       if (res && res.error) toast("Test failed: " + res.error, true);
-      else if (res && res.pending) toast(t("Stevo pronto — falta o número conectado para enviar de verdade.", "Stevo ready — connect a number to actually send."), true);
+      else if (res && res.pending) toast(t("Canal pronto — falta o número conectado pra enviar de verdade.", "Channel ready — connect a number to actually send."), true);
       else toast(res && res.mock ? "Test (mock) ok — connect backend to really send." : t("Teste enviado.", "Test sent."));
     });
     const sched = $("#d-schedule"); sched && (sched.onclick = () => {
@@ -1722,13 +1723,6 @@ function wire(route, params) {
       await loadTagCounts();
       anaRefresh.disabled = false; anaRefresh.textContent = o;
       toast(t("Contagens atualizadas.", "Counts refreshed.")); render();
-    });
-    // Copy chainMessages JSON for TENANTS
-    const chainCopy = $("#set-chain-copy");
-    chainCopy && (chainCopy.onclick = async () => {
-      const txt = $("#set-chain-export").textContent;
-      try { await navigator.clipboard.writeText(txt); toast(t("chainMessages copiado.", "chainMessages copied.")); }
-      catch { toast(t("Falha ao copiar.", "Copy failed."), true); }
     });
   }
 
